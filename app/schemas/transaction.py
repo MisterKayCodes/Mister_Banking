@@ -1,21 +1,81 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
+from typing import Optional
+from datetime import datetime
+from decimal import Decimal
+from enum import Enum
+
+class TransferType(str, Enum):
+    INTERNAL = "internal"
+    EXTERNAL = "external"
 
 class TransactionCreate(BaseModel):
-    sender_account_id: int
-    receiver_account_id: int
-    amount: float
-    currency: str = "USD"
-    fee: float = 0.0
+    from_account_no: str = Field(..., min_length=10, max_length=10)
+    transfer_type: TransferType = Field(default=TransferType.INTERNAL)
+    amount: Decimal = Field(..., gt=0)
+    
+    # ## Path A: Internal
+    to_account_no: Optional[str] = Field(None, min_length=10, max_length=10)
+    
+    # ## Path B: External (Overseas) - Consolidated fields
+    external_bank_name: Optional[str] = None
+    external_swift_bic: Optional[str] = Field(None, min_length=8, max_length=11)
+    external_iban_or_acc: Optional[str] = None
+    recipient_full_name: Optional[str] = None
+    recipient_address: Optional[str] = None
+    purpose_of_transfer: Optional[str] = None
 
+    @model_validator(mode='after')
+    def validate_logic(self) -> 'TransactionCreate':
+        # ## Mister, one validator to rule them all.
+        if self.transfer_type == TransferType.INTERNAL:
+            if not self.to_account_no:
+                raise ValueError("Internal moves require a 10-digit recipient number, Mister.")
+        
+        elif self.transfer_type == TransferType.EXTERNAL:
+            # Check the "Big Four" for overseas wires
+            if not all([self.external_bank_name, self.external_swift_bic, 
+                        self.external_iban_or_acc, self.recipient_full_name]):
+                raise ValueError("Overseas wires require Bank Name, SWIFT, Account/IBAN, and Recipient Name.")
+        return self
+class BuyCryptoRequest(BaseModel):
+    account_no: str = Field(..., min_length=10, max_length=10)
+    crypto_symbol: str = Field(..., pattern="^(BTC|ETH|USDT)$")
+    amount_usdt: Decimal = Field(..., gt=0)
 class TransactionResponse(BaseModel):
     id: int
-    sender_account_id: int
-    receiver_account_id: int
-    amount: float
+    reference: str
+    transfer_type: TransferType
+    
+    # ## Mister, these are the 'Identity' strings we added to the DB
+    sender_no: str 
+    receiver_no: Optional[str] = None
+    
+    amount: Decimal
     currency: str
-    fee: float
+    fee: Decimal
     status: str
+    
+    # ## External context for the UI
+    external_bank_name: Optional[str] = None
+    recipient_full_name: Optional[str] = None
+    
     is_reversible: bool
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class TransactionReceipt(BaseModel):
+    reference: str
+    sender_account_id: int
+    receiver_account_id: Optional[int] = None
+    external_info: Optional[str] = None # ## To show the outside bank info on the receipt
+    amount: Decimal
+    fee: Decimal
+    currency: str
+    status: str
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
