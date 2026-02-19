@@ -78,6 +78,17 @@ def set_maintenance(enabled: bool,
                     admin=Depends(get_admin_user)):
     return toggle_system_maintenance(db, enabled, background_tasks, admin.id)
 
+
+@router.post("/system/broadcast")
+def send_global_alert(title: str, message: str, n_type: str = "info", 
+                      db: Session = Depends(get_db), admin=Depends(get_admin_user)):
+    """Mister, use this to send a message to EVERY user in the bank at once."""
+    from app.models.user import User
+    users = db.query(User).all()
+    for user in users:
+        send_notification(db, user_id=user.id, title=title, message=message, n_type=n_type)
+    return {"status": "success", "message": f"Broadcast sent to {len(users)} citizens."}
+
 @router.delete("/users/{user_id}/nuclear")
 def nuclear_wipe_route(user_id: int, db: Session = Depends(get_db), admin=Depends(get_admin_user)):
     if user_id == admin.id:
@@ -133,12 +144,18 @@ def remove_requirement(req_id: int, db: Session = Depends(get_db), admin=Depends
 # ## -------------------- GOD-MODE VERDICT --------------------
 
 @router.patch("/kyc/submissions/{sub_id}/review")
-def fast_review(sub_id: int, status: str, comment: str = None, db: Session = Depends(get_db), admin=Depends(get_admin_user)):
-    """
-    Mister, one-click verdict. 
-    You can approve or decline without opening a second page.
-    """
-    return review_kyc_submission(db, sub_id, status, comment)
+def fast_review(sub_id: int, status: str, comment: str = None, 
+                db: Session = Depends(get_db), admin=Depends(get_admin_user)):
+    # 1. Execute the verdict in the database
+    result = review_kyc_submission(db, sub_id, status, comment)
+    
+    # 2. MISTER'S PING: Tell the user the news!
+    n_type = "success" if status == "approved" else "error"
+    msg = f"Your KYC has been {status}. {comment if comment else ''}"
+    
+    send_notification(db, user_id=result.user_id, title="KYC Update", message=msg, n_type=n_type)
+    
+    return result
 
 @router.get("/kyc/pending-approvals")
 def view_pending_kyc(db: Session = Depends(get_db), admin=Depends(get_admin_user)):
