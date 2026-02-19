@@ -8,7 +8,8 @@ from app.models.account import Account
 from app.services.config_service import get_config_float, get_config_int
 from app.schemas.transaction import TransactionCreate, TransferType
 from app.models.user import User
-
+from app.core.security import verify_password, hash_password
+from app.services.notification_service import send_notification
 # -------------------- MISTER'S PRIVATE HELPERS --------------------
 
 def _check_kyc_approval(db: Session, user_id: int) -> User:
@@ -38,35 +39,51 @@ def _get_account_by_number(db: Session, account_number: str, active_only: bool =
 # -------------------- CORE TRANSACTION LOGIC --------------------
 
 def create_transaction(db: Session, user_id: int, data: TransactionCreate):
-    # ## 0. THE GATE: Check status and get user details
-    # Mister, this still ensures they are active, but now returns the user object.
-    user = _check_kyc_approval(db, user_id)
+    """
+    Mister, this is the main engine. It now requires a PIN and sends 
+    a receipt to the user's notification tray automatically.
+    """
+    # ## 0. THE SECURITY GATE
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Citizen not found, Mister.")
+
+    # ## -------------------- #COPY: PIN VERIFICATION --------------------
+    if not user.pin_hash:
+        raise HTTPException(status_code=400, detail="Transaction PIN not set, Mister.")
+    
+    if not verify_password(data.pin, user.pin_hash):
+        # Notify user of a failed attempt for security
+        send_notification(
+            db, user_id, 
+            title="Security Alert", 
+            message="A transaction was attempted with an incorrect PIN.", 
+            n_type="warning"
+        )
+        raise HTTPException(status_code=403, detail="Invalid PIN. Access denied.")
+    # ## -----------------------------------------------------------------
 
     # ## 1. Fetch sender and check ownership
-    sender = _get_account_by_number(db, data.from_account_no)
-    if sender.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Ownership mismatch, Mister.")
+    sender = db.query(Account).filter(Account.account_number == data.from_account_no).first()
+    if not sender or sender.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Ownership mismatch or account missing.")
     
-    # ## 2. MISTER'S LIMIT CHECK (THE NEW BRAKES)
-    # We dynamically pull the limit based on whether they are 'verified' or not.
+    # ## 2. MISTER'S LIMIT CHECK
     limit_key = "verified_transaction_limit" if user.kyc_status == "verified" else "unverified_transaction_limit"
     current_limit = Decimal(str(get_config_float(db, limit_key)))
 
     if data.amount > current_limit:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Mister says: Transaction limit exceeded. Your current limit is ${current_limit}."
-        )
+        raise HTTPException(status_code=400, detail=f"Limit exceeded. Max: ${current_limit}")
 
-    # ## 3. Fee Calculation
+    # ## 3. Fee & Balance Check
     fee_percent = Decimal(str(get_config_float(db, "transfer_fee_percent")))
     fee = (data.amount * fee_percent) / 100
-    total = data.amount + fee
+    total_deduction = data.amount + fee
 
-    if sender.balance < total:
+    if sender.balance < total_deduction:
         raise HTTPException(status_code=400, detail="Insufficient funds for amount + fees.")
 
-    # ## 4. Build the Transaction Record
+    # ## 4. Execution
     now = datetime.utcnow()
     new_tx = Transaction(
         reference=str(uuid.uuid4()),
@@ -79,36 +96,46 @@ def create_transaction(db: Session, user_id: int, data: TransactionCreate):
     )
 
     if data.transfer_type == TransferType.INTERNAL:
-        # ## PATH A: Internal Logic (Instant)
-        receiver = _get_account_by_number(db, data.to_account_no)
-        if sender.id == receiver.id:
-            raise HTTPException(status_code=400, detail="Self-transfer is a loop to nowhere.")
+        receiver = db.query(Account).filter(Account.account_number == data.to_account_no).first()
+        if not receiver or sender.id == receiver.id:
+            raise HTTPException(status_code=400, detail="Invalid receiver account.")
         
-        sender.balance -= total
+        sender.balance -= total_deduction
         receiver.balance += data.amount
         new_tx.receiver_account_id = receiver.id
         new_tx.receiver_no = receiver.account_number
         new_tx.status = "success"
         new_tx.completed_at = now
         
+        # #COPY: Notify the receiver too!
+        send_notification(
+            db, receiver.user_id, 
+            title="Credit Alert", 
+            message=f"You received ${data.amount} from {user.full_name}.", 
+            n_type="success"
+        )
     else:
-        # ## PATH B: External Logic (Overseas/Wire)
-        # ## These stay PENDING for your manual approval, Mister.
-        sender.balance -= total
-        new_tx.receiver_no = data.external_account_no
+        # External Transfer (Wire)
+        sender.balance -= total_deduction
         new_tx.status = "pending"
-        
-        # Mapping external banking details
+        new_tx.receiver_no = data.external_account_no
         new_tx.external_bank_name = data.external_bank_name
-        new_tx.external_swift_bic = data.external_swift_bic
-        new_tx.external_iban_or_acc = data.external_account_no
-        new_tx.recipient_full_name = data.recipient_full_name
-        new_tx.purpose_of_transfer = data.purpose_of_transfer
 
     db.add(new_tx)
     db.commit()
     db.refresh(new_tx)
-    return new_tx    
+
+    # #COPY: Notify the sender of success
+    send_notification(
+        db, user_id, 
+        title="Transaction Successful", 
+        message=f"Sent ${data.amount} to {new_tx.receiver_no}. Fee: ${fee}.", 
+        n_type="info"
+    )
+
+    return new_tx
+    
+    
 # -------------------- CRYPTO & ADMIN POWERS --------------------
 
 def buy_crypto(db: Session, user_id: int, account_no: str, amount_usdt: Decimal, crypto_symbol: str):

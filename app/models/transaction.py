@@ -19,7 +19,7 @@ class Transaction(Base):
     # ## Money (Upgraded to Numeric for Decimal precision)
     amount = Column(Numeric(20, 8), nullable=False)
     fee = Column(Numeric(20, 8), default=0.0)
-    currency = Column(String, nullable=False, default="USDT")
+    currency = Column(String, nullable=False, default="USD")
     
     # ## External/Overseas Details (The new 'Pockets', Mister)
     transfer_type = Column(String, default="internal") # 'internal' or 'external'
