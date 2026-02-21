@@ -163,7 +163,7 @@ def update_fees(db: Session, transfer_fee: Decimal, instant_fee: Decimal, backgr
     background_tasks.add_task(background_log_audit, f"Fees updated to {transfer_fee}%/{instant_fee}%, Mister.", admin_id)
     return {"status": "success", "message": "New fees are live, Mister."}
 
-    
+
 # -------------------- ULTIMATE AUTHORITY POWERS --------------------
 
 def execute_nuclear_user_wipe(db: Session, user_id: int, admin_id: int):
@@ -202,10 +202,9 @@ def execute_nuclear_user_wipe(db: Session, user_id: int, admin_id: int):
 # -------------------- USER & LEDGER OVERVIEW --------------------
 
 def get_all_users_master_list(db: Session):
-    """Mister, the total Eye in the Sky. Fiat and Crypto combined."""
+    """Mister, the total Eye in the Sky. Formatted for human eyes."""
     from app.models.wallet import Wallet
     
-    # Mister, we join the User with their Account AND their Wallet
     results = db.query(User, Account, Wallet).outerjoin(
         Account, User.id == Account.user_id
     ).outerjoin(
@@ -214,14 +213,19 @@ def get_all_users_master_list(db: Session):
 
     master_ledger = []
     for user, account, wallet in results:
+        # Mister, we force the format here so the Dashboard gets clean strings!
+        fiat = f"{account.balance:,.2f} {account.currency}" if account else "0.00 USD"
+        btc = f"{wallet.btc_balance:0.8f} BTC" if wallet else "0.00000000 BTC"
+        usdt = f"{wallet.usdt_balance:0.2f} USDT" if wallet else "0.00 USDT"
+
         master_ledger.append({
             "user_id": user.id,
             "name": user.full_name,
             "email": user.email,
             "status": "Active" if user.is_active else "Suspended",
-            "fiat_balance": f"{account.balance} {account.currency}" if account else "0.00 USD",
-            "btc_balance": f"{wallet.btc_balance if wallet else 0.0} BTC",
-            "usdt_vault": f"{wallet.usdt_balance if wallet else 0.0} USDT"
+            "fiat_balance": fiat,
+            "btc_balance": btc,
+            "usdt_vault": usdt
         })
     return master_ledger
 

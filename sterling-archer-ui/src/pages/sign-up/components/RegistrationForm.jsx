@@ -4,6 +4,7 @@ import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import Icon from '../../../components/AppIcon';
+import api from '../../../api/axios'; // Mister, make sure this file exists!
 
 const RegistrationForm = () => {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ const RegistrationForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // ... (Keep your validation functions exactly as they were)
   const validateFullName = (name) => {
     if (!name?.trim()) return 'Full name is required';
     if (name?.trim()?.length < 2) return 'Name must be at least 2 characters';
@@ -51,31 +53,19 @@ const RegistrationForm = () => {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
     let error = '';
     switch (field) {
-      case 'fullName':
-        error = validateFullName(value);
-        break;
-      case 'email':
-        error = validateEmail(value);
-        break;
-      case 'password':
+      case 'fullName': error = validateFullName(value); break;
+      case 'email': error = validateEmail(value); break;
+      case 'password': 
         error = validatePassword(value);
         if (formData?.confirmPassword) {
-          setErrors(prev => ({
-            ...prev,
-            confirmPassword: validateConfirmPassword(formData?.confirmPassword, value)
-          }));
+          setErrors(prev => ({ ...prev, confirmPassword: validateConfirmPassword(formData?.confirmPassword, value) }));
         }
         break;
-      case 'confirmPassword':
-        error = validateConfirmPassword(value, formData?.password);
-        break;
-      default:
-        break;
+      case 'confirmPassword': error = validateConfirmPassword(value, formData?.password); break;
+      default: break;
     }
-    
     setErrors(prev => ({ ...prev, [field]: error }));
   };
 
@@ -94,53 +84,47 @@ const RegistrationForm = () => {
     }
 
     setErrors(newErrors);
-
-    const hasErrors = Object.values(newErrors)?.some(error => error !== '');
-    if (hasErrors) return;
+    if (Object.values(newErrors)?.some(error => error !== '')) return;
 
     setIsLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const mockResponse = {
-        success: true,
-        user: {
-          id: 'usr_' + Date.now(),
-          fullName: formData?.fullName,
-          email: formData?.email
-        },
-        token: 'mock_jwt_token_' + Date.now()
+      // Mister, we map 'fullName' to 'full_name' for the FastAPI UserCreate schema
+      const payload = {
+        full_name: formData.fullName,
+        email: formData.email,
+        password: formData.password
       };
 
-      if (mockResponse?.success) {
+      // Real API Call to your FastAPI endpoint
+      const response = await api.post('/auth/register', payload);
+
+      if (response.data) {
         navigate('/login', { 
           state: { 
-            message: 'Account created successfully! Please log in.',
+            message: 'Account created successfully! Welcome to the Trust, Mister.',
             email: formData?.email 
           } 
         });
       }
     } catch (error) {
-      setErrors(prev => ({
-        ...prev,
-        submit: 'Registration failed. Please try again.'
-      }));
+      // Catching the specific detail message from your FastAPI HTTPException
+      const serverError = error.response?.data?.detail || 'Registration failed. The vault is closed.';
+      setErrors(prev => ({ ...prev, submit: serverError }));
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ... (Keep getPasswordStrength and the return statement exactly as they were)
   const getPasswordStrength = (password) => {
     if (!password) return { strength: 0, label: '', color: '' };
-    
     let strength = 0;
     if (password?.length >= 8) strength++;
     if (/(?=.*[a-z])/?.test(password)) strength++;
     if (/(?=.*[A-Z])/?.test(password)) strength++;
     if (/(?=.*\d)/?.test(password)) strength++;
     if (/(?=.*[@$!%*?&#])/?.test(password)) strength++;
-
     if (strength <= 2) return { strength, label: 'Weak', color: 'bg-error' };
     if (strength <= 3) return { strength, label: 'Fair', color: 'bg-warning' };
     if (strength <= 4) return { strength, label: 'Good', color: 'bg-accent' };
@@ -210,12 +194,10 @@ const RegistrationForm = () => {
                 {passwordStrength?.label}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground caption">
-              Password must contain: 8+ characters, uppercase, lowercase, number, and special character
-            </p>
           </div>
         )}
       </div>
+      
       <div className="relative">
         <Input
           label="Confirm Password"
@@ -231,23 +213,16 @@ const RegistrationForm = () => {
           type="button"
           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
           className="absolute right-3 top-9 p-2 text-muted-foreground hover:text-foreground transition-smooth"
-          aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
         >
           <Icon name={showConfirmPassword ? 'EyeOff' : 'Eye'} size={18} color="currentColor" />
         </button>
       </div>
+
       <div className="space-y-2">
         <Checkbox
           label={
             <span className="text-sm text-foreground">
-              I agree to the{' '}
-              <a href="#" className="text-accent hover:text-accent-foreground transition-smooth">
-                Terms of Service
-              </a>
-              {' '}and{' '}
-              <a href="#" className="text-accent hover:text-accent-foreground transition-smooth">
-                Privacy Policy
-              </a>
+              I agree to the <a href="#" className="text-accent">Terms of Service</a> and <a href="#" className="text-accent">Privacy Policy</a>
             </span>
           }
           checked={formData?.agreeToTerms}
@@ -264,12 +239,14 @@ const RegistrationForm = () => {
           </p>
         )}
       </div>
+
       {errors?.submit && (
         <div className="flex items-center gap-2 px-4 py-3 bg-error/10 border border-error/20 rounded-xl">
           <Icon name="AlertCircle" size={16} color="var(--color-error)" />
           <p className="text-sm text-error caption">{errors?.submit}</p>
         </div>
       )}
+
       <Button
         type="submit"
         variant="default"
@@ -279,13 +256,14 @@ const RegistrationForm = () => {
       >
         Create Account
       </Button>
+
       <div className="text-center">
         <p className="text-sm text-muted-foreground caption">
           Already have an account?{' '}
           <button
             type="button"
             onClick={() => navigate('/login')}
-            className="text-accent hover:text-accent-foreground font-medium transition-smooth"
+            className="text-accent font-medium"
             disabled={isLoading}
           >
             Sign In

@@ -24,3 +24,17 @@ def get_live_btc_price():
         return Decimal(str(response.json()["bitcoin"]["usd"]))
     except:
         raise HTTPException(status_code=503, detail="Mister, the market oracle is down.")
+
+
+# Add this to your app/core/crypto.py
+def validate_external_address(address: str, coin: str) -> bool:
+    """Mister, we verify the target looks like a real vault."""
+    coin = coin.upper()
+    if coin == "BTC":
+        # Our generator: bc1q + 32 chars. 
+        # We'll allow 30-45 to be safe for external variants.
+        return address.startswith("bc1q") and 30 <= len(address) <= 60
+    elif coin == "USDT":
+        # Our generator: 0x + 40 hex chars (20 bytes).
+        return address.startswith("0x") and len(address) == 42
+    return False

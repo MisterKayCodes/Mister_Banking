@@ -50,6 +50,12 @@ class BuyCryptoRequest(BaseModel):
     amount_usdt: Decimal = Field(..., gt=0)
     pin: str = Field(..., min_length=4, max_length=6) # Mister, crypto needs a PIN too!
 
+class SellCryptoRequest(BaseModel):
+    account_no: str = Field(..., min_length=10, max_length=10)
+    crypto_symbol: str = Field(..., pattern="^(BTC|ETH|USDT)$")
+    amount_usdt: Decimal = Field(..., gt=0)
+    pin: str = Field(..., min_length=4, max_length=6) # Mister, crypto needs a PIN too!
+
 class TransactionResponse(BaseModel):
     id: int
     reference: str
@@ -87,3 +93,18 @@ class TransactionReceipt(BaseModel):
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CryptoTransferRequest(BaseModel):
+    """Mister, the blueprint for sending digital gold to the world."""
+    account_no: str = Field(..., min_length=10, max_length=10)
+    crypto_symbol: str = Field(..., pattern="^(BTC|ETH|USDT)$")
+    amount_crypto: Decimal = Field(..., gt=0) # We use 'amount_crypto' to avoid confusion with USD
+    to_address: str = Field(...) 
+    pin: str = Field(..., min_length=4, max_length=6)
+
+class CryptoAddressResponse(BaseModel):
+    """Mister, a clean way to show the citizen their vault addresses."""
+    btc_address: str
+    usdt_address: str
+    eth_address: Optional[str] = None

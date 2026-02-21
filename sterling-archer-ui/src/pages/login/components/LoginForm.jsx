@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import Icon from '../../../components/AppIcon';
+import api from '../../../api/axios'; // Mister, the bridge to your FastAPI
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -21,65 +22,53 @@ const LoginForm = () => {
 
   const validateForm = () => {
     const newErrors = {};
-
     if (!formData?.email?.trim()) {
       newErrors.email = 'Email address is required';
     } else if (!validateEmail(formData?.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
-
     if (!formData?.password) {
       newErrors.password = 'Password is required';
-    } else if (formData?.password?.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors)?.length === 0;
   };
 
   const handleChange = (e) => {
     const { name, value } = e?.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
     if (errors?.[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
+      setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
 
     try {
-      const mockCredentials = {
-        email: 'john.sterling@example.com',
-        password: 'Sterling@2026'
-      };
+      // Mister, we hit your FastAPI login endpoint
+      const response = await api.post('/auth/login', {
+        email: formData.email,
+        password: formData.password
+      });
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Your backend returns {"access_token": "..."}
+      const { access_token } = response.data;
 
-      if (formData?.email === mockCredentials?.email && formData?.password === mockCredentials?.password) {
-        navigate('/citizen-dashboard');
-      } else {
-        setErrors({
-          password: 'Invalid email or password. Please try again.'
-        });
+      if (access_token) {
+        // We store the key to the vault in the browser
+        localStorage.setItem('mister_token', access_token);
+        
+        // Success! Off to the dashboard
+        navigate('/dashboard');
       }
     } catch (error) {
-      setErrors({
-        password: 'An error occurred during login. Please try again.'
-      });
+      // Mister, we catch the "Wrong key" message from your service
+      const serverMessage = error.response?.data?.detail || 'Invalid email or password. Access denied.';
+      setErrors({ password: serverMessage });
     } finally {
       setIsLoading(false);
     }
@@ -114,7 +103,6 @@ const LoginForm = () => {
           type="button"
           onClick={() => setShowPassword(!showPassword)}
           className="absolute right-3 top-[38px] p-2 text-muted-foreground hover:text-foreground transition-smooth"
-          aria-label={showPassword ? 'Hide password' : 'Show password'}
         >
           <Icon name={showPassword ? 'EyeOff' : 'Eye'} size={18} color="currentColor" />
         </button>
