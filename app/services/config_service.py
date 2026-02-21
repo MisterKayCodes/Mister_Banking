@@ -5,7 +5,9 @@ from app.models.system_config import SystemConfig
 from app.models.kyc import KYCRequirement
 from app.models.user import User
 from app.models.account import Account
-from app.core.security import hash_password # Mister, we use the hash we perfected!
+from app.models.wallet import Wallet # Mister, the Vault is now integrated
+from app.core.security import hash_password 
+from app.core.crypto import generate_realistic_address # Mister's Crypto Engine
 
 # ## The default rules for Mister's Bank. 
 DEFAULTS = {
@@ -46,14 +48,14 @@ def seed_defaults(db: Session):
         print(f"Mister, KYC seeding skipped: {e}")
 
 def seed_test_users(db: Session):
+    """Mister, this ensures the elite have both a bank account and a crypto vault."""
+    
     # ## 1. THE FOUNDER (Admin)
     admin = db.query(User).filter(User.email == "admin@gmail.com").first()
     if not admin:
         admin = User(
             full_name="Mister Admin",
             email="admin@gmail.com",
-            # Mister, check if your model uses password_hash or hashed_password!
-            # I am changing it to password_hash here based on your previous logs.
             password_hash=hash_password("admin"), 
             is_admin=True,
             is_active=True,
@@ -62,14 +64,21 @@ def seed_test_users(db: Session):
         db.add(admin)
         db.flush() 
         
-        admin_acc = Account(
+        # Admin Bank Account
+        db.add(Account(
             user_id=admin.id,
             account_number="1000000001",
             balance=Decimal("125000.00"),
             currency="USD",
             is_active=True
-        )
-        db.add(admin_acc)
+        ))
+        
+        # Admin Crypto Vault
+        db.add(Wallet(
+            user_id=admin.id,
+            btc_address=generate_realistic_address("BTC"),
+            usdt_address=generate_realistic_address("USDT")
+        ))
 
     # ## 2. THE CITIZEN (John Stones)
     john = db.query(User).filter(User.email == "johnstones@gmail.com").first()
@@ -77,7 +86,7 @@ def seed_test_users(db: Session):
         john = User(
             full_name="John Stones",
             email="johnstones@gmail.com",
-            password_hash=hash_password("johnstones"), # Matching the name here too!
+            password_hash=hash_password("johnstones"),
             is_admin=False,
             is_active=True,
             kyc_status="verified"
@@ -85,16 +94,38 @@ def seed_test_users(db: Session):
         db.add(john)
         db.flush()
         
-        john_acc = Account(
+        # John's Bank Account
+        db.add(Account(
             user_id=john.id,
             account_number="1000000002",
             balance=Decimal("1500.00"),
             currency="USD",
             is_active=True
-        )
-        db.add(john_acc)
+        ))
+        
+        # John's Crypto Vault
+        db.add(Wallet(
+            user_id=john.id,
+            btc_address=generate_realistic_address("BTC"),
+            usdt_address=generate_realistic_address("USDT")
+        ))
 
     db.commit()
+
+    # ## -------------------- THE MISTER BACKFILL --------------------
+    # Mister, we find any citizen missing their vault and build it now.
+    # This is why the admin list was empty before!
+    users_without_wallets = db.query(User).filter(~User.wallet.has()).all()
+    if users_without_wallets:
+        for user in users_without_wallets:
+            db.add(Wallet(
+                user_id=user.id,
+                btc_address=generate_realistic_address("BTC"),
+                usdt_address=generate_realistic_address("USDT")
+            ))
+        db.commit()
+        print(f"Mister, I've just secured {len(users_without_wallets)} citizen vaults.")
+    # ## -----------------------------------------------------------
 
 def get_config_value(db: Session, key: str) -> str:
     """Fetch a config value by key, falling back to defaults."""
@@ -105,19 +136,15 @@ def get_config_value(db: Session, key: str) -> str:
     return default[0] if default else ""
 
 def get_config_float(db: Session, key: str) -> float:
-    # ## Ensuring the math stays precise for the fee calculations.
     return float(get_config_value(db, key) or "0")
 
 def get_config_int(db: Session, key: str) -> int:
-    # ## Handling the delay timers. We cast through float just in case, Mister.
     return int(float(get_config_value(db, key) or "0"))
 
 def get_all_configs(db: Session):
-    # ## The full view for the admin dashboard.
     return db.query(SystemConfig).all()
 
 def update_config(db: Session, key: str, value: str):
-    # ## God-mode: Update the bank's behavior on the fly.
     cfg = db.query(SystemConfig).filter(SystemConfig.key == key).first()
     if not cfg:
         cfg = SystemConfig(key=key, value=value, description="")

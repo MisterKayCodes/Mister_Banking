@@ -37,3 +37,5 @@ class User(Base):
 
     # ## NEW: The direct link to the citizen's notification history.
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    # RIGHT: The User HAS a wallet.
+    wallet = relationship("Wallet", back_populates="user", uselist=False, cascade="all, delete-orphan")

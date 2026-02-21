@@ -1,81 +1,68 @@
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import datetime
 import uuid
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
+from fastapi import HTTPException, BackgroundTasks
+
+# Core Imports
+from app.core.crypto import get_live_btc_price
+from app.core.security import verify_password
 from app.models.transaction import Transaction
 from app.models.account import Account
-from app.services.config_service import get_config_float, get_config_int
-from app.schemas.transaction import TransactionCreate, TransferType
 from app.models.user import User
-from app.core.security import verify_password, hash_password
+
+# Service Imports
+from app.services.config_service import get_config_float, get_config_int
 from app.services.notification_service import send_notification
+# ## MISTER: Make sure this path to admin_service is correct!
+from app.services.admin_service import get_system_config_value, background_log_audit
+
+# Schema Imports
+from app.schemas.transaction import TransactionCreate, TransferType
+from app.schemas.wallet import CryptoTradeRequest
+
 # -------------------- MISTER'S PRIVATE HELPERS --------------------
 
 def _check_kyc_approval(db: Session, user_id: int) -> User:
-    # ## Mister, the name stays the same, but now it carries a gift (the user data).
+    # ## Mister, the gatekeeper function is now dual-purpose.
     user = db.query(User).filter(User.id == user_id).first()
-    
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
-        
-    # We still do the "verified" check for your existing security logic
-    if user.kyc_status != "verified":
-        # EXCEPT: If we want unverified users to have a $500 limit, 
-        # we shouldn't 'raise' here anymore. We should check the limit later!
-        pass 
-
     return user
 
 def _get_account_by_number(db: Session, account_number: str, active_only: bool = True) -> Account:
-    # ## Mister, we now look up by the 10-digit identity!
+    # ## Identity lookup via the 10-digit ledger ID.
     account = db.query(Account).filter(Account.account_number == account_number).first()
     if not account:
         raise HTTPException(status_code=404, detail=f"Account {account_number} not found.")
     if active_only and not account.is_active:
-        raise HTTPException(status_code=400, detail="Your account is inactive.")
+        raise HTTPException(status_code=400, detail="This account is currently suspended, Mister.")
     return account
 
 # -------------------- CORE TRANSACTION LOGIC --------------------
 
 def create_transaction(db: Session, user_id: int, data: TransactionCreate):
-    """
-    Mister, this is the main engine. It now requires a PIN and sends 
-    a receipt to the user's notification tray automatically.
-    """
-    # ## 0. THE SECURITY GATE
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Citizen not found, Mister.")
-
-    # ## -------------------- #COPY: PIN VERIFICATION --------------------
+    # ## 0. THE SECURITY GATE (PIN Verification)
+    user = _check_kyc_approval(db, user_id)
     if not user.pin_hash:
         raise HTTPException(status_code=400, detail="Transaction PIN not set, Mister.")
     
     if not verify_password(data.pin, user.pin_hash):
-        # Notify user of a failed attempt for security
-        send_notification(
-            db, user_id, 
-            title="Security Alert", 
-            message="A transaction was attempted with an incorrect PIN.", 
-            n_type="warning"
-        )
+        send_notification(db, user_id, title="Security Alert", message="Incorrect PIN attempt.", n_type="warning")
         raise HTTPException(status_code=403, detail="Invalid PIN. Access denied.")
-    # ## -----------------------------------------------------------------
 
-    # ## 1. Fetch sender and check ownership
-    sender = db.query(Account).filter(Account.account_number == data.from_account_no).first()
-    if not sender or sender.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Ownership mismatch or account missing.")
+    # ## 1. OWNERSHIP & LIMITS
+    sender = _get_account_by_number(db, data.from_account_no)
+    if sender.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Ownership mismatch.")
     
-    # ## 2. MISTER'S LIMIT CHECK
     limit_key = "verified_transaction_limit" if user.kyc_status == "verified" else "unverified_transaction_limit"
     current_limit = Decimal(str(get_config_float(db, limit_key)))
 
     if data.amount > current_limit:
         raise HTTPException(status_code=400, detail=f"Limit exceeded. Max: ${current_limit}")
 
-    # ## 3. Fee & Balance Check
+    # ## 2. FEES & BALANCE
     fee_percent = Decimal(str(get_config_float(db, "transfer_fee_percent")))
     fee = (data.amount * fee_percent) / 100
     total_deduction = data.amount + fee
@@ -83,7 +70,7 @@ def create_transaction(db: Session, user_id: int, data: TransactionCreate):
     if sender.balance < total_deduction:
         raise HTTPException(status_code=400, detail="Insufficient funds for amount + fees.")
 
-    # ## 4. Execution
+    # ## 3. EXECUTION
     now = datetime.utcnow()
     new_tx = Transaction(
         reference=str(uuid.uuid4()),
@@ -96,9 +83,9 @@ def create_transaction(db: Session, user_id: int, data: TransactionCreate):
     )
 
     if data.transfer_type == TransferType.INTERNAL:
-        receiver = db.query(Account).filter(Account.account_number == data.to_account_no).first()
-        if not receiver or sender.id == receiver.id:
-            raise HTTPException(status_code=400, detail="Invalid receiver account.")
+        receiver = _get_account_by_number(db, data.to_account_no)
+        if sender.id == receiver.id:
+            raise HTTPException(status_code=400, detail="Cannot send money to the same account.")
         
         sender.balance -= total_deduction
         receiver.balance += data.amount
@@ -107,15 +94,8 @@ def create_transaction(db: Session, user_id: int, data: TransactionCreate):
         new_tx.status = "success"
         new_tx.completed_at = now
         
-        # #COPY: Notify the receiver too!
-        send_notification(
-            db, receiver.user_id, 
-            title="Credit Alert", 
-            message=f"You received ${data.amount} from {user.full_name}.", 
-            n_type="success"
-        )
+        send_notification(db, receiver.user_id, title="Credit Alert", message=f"Received ${data.amount} from {user.full_name}.", n_type="success")
     else:
-        # External Transfer (Wire)
         sender.balance -= total_deduction
         new_tx.status = "pending"
         new_tx.receiver_no = data.external_account_no
@@ -125,54 +105,79 @@ def create_transaction(db: Session, user_id: int, data: TransactionCreate):
     db.commit()
     db.refresh(new_tx)
 
-    # #COPY: Notify the sender of success
-    send_notification(
-        db, user_id, 
-        title="Transaction Successful", 
-        message=f"Sent ${data.amount} to {new_tx.receiver_no}. Fee: ${fee}.", 
-        n_type="info"
-    )
-
+    send_notification(db, user_id, title="Transaction Successful", message=f"Sent ${data.amount} to {new_tx.receiver_no}.", n_type="info")
     return new_tx
-    
-    
+
 # -------------------- CRYPTO & ADMIN POWERS --------------------
 
-def buy_crypto(db: Session, user_id: int, account_no: str, amount_usdt: Decimal, crypto_symbol: str):
-    # ## 0. THE GATE: Catch the user object here!
-    user = _check_kyc_approval(db, user_id)
-    
-    # ## 1. THE STATUS CHECK: No verification, no crypto.
-    if user.kyc_status != "verified":
-        raise HTTPException(
-            status_code=403, 
-            detail="Mister says: The Crypto vault is for verified citizens only."
-        )
+def execute_crypto_trade(db: Session, user_id: int, data: CryptoTradeRequest, background_tasks: BackgroundTasks):
+    # ## 1. ADMIN OVERRIDE
+    is_active = get_system_config_value(db, "crypto_trading_enabled", default="true")
+    if is_active.lower() != "true":
+        raise HTTPException(status_code=403, detail="Mister, the crypto markets are currently frozen by the Founder.")
 
-    # ## 2. Fetch account and check ownership
-    account = _get_account_by_number(db, account_no)
+    # ## 2. ACCESS CHECK
+    user = _check_kyc_approval(db, user_id)
+    if user.kyc_status != "verified":
+        raise HTTPException(status_code=403, detail="The Crypto Vault requires a 'verified' status, Mister.")
+
+    account = _get_account_by_number(db, data.account_no)
     if account.user_id != user_id:
         raise HTTPException(status_code=403, detail="Ownership mismatch.")
 
-    # ## 3. Balance Check
-    if account.balance < amount_usdt:
-        raise HTTPException(status_code=400, detail="Not enough USDT in your vault.")
+    if not user.wallet:
+        raise HTTPException(status_code=400, detail="Mister, this citizen does not have a wallet initialized.")
 
-    # ## 4. Execute and Record
-    account.balance -= amount_usdt
+    # ## 3. MATH & PRICING
+    fee_pct_str = get_system_config_value(db, "crypto_trade_fee_percent", default="0.5")
+    fee_percent = Decimal(fee_pct_str)
+    fee_usd = (data.amount_usd * fee_percent) / 100
+    trade_value_usd = data.amount_usd - fee_usd 
+
+    price = get_live_btc_price() if data.crypto_symbol.upper() == "BTC" else Decimal("1.00")
+    crypto_quantity = trade_value_usd / price
+
+    # ## 4. EXECUTION
+    if data.side == "buy":
+        if account.balance < data.amount_usd:
+            raise HTTPException(status_code=400, detail="Insufficient bank balance.")
+        account.balance -= data.amount_usd
+        if data.crypto_symbol.upper() == "BTC":
+            user.wallet.btc_balance += crypto_quantity
+        else:
+            user.wallet.usdt_balance += crypto_quantity
+    elif data.side == "sell":
+        curr_bal = user.wallet.btc_balance if data.crypto_symbol.upper() == "BTC" else user.wallet.usdt_balance
+        required_crypto = data.amount_usd / price 
+        if curr_bal < required_crypto:
+             raise HTTPException(status_code=400, detail="Insufficient crypto balance.")
+        
+        if data.crypto_symbol.upper() == "BTC":
+            user.wallet.btc_balance -= required_crypto
+        else:
+            user.wallet.usdt_balance -= required_crypto
+        account.balance += trade_value_usd
+
+    # ## 5. COMMIT
     tx = Transaction(
         reference=str(uuid.uuid4()),
         sender_account_id=account.id,
         sender_no=account.account_number,
-        amount=amount_usdt,
-        currency=crypto_symbol,
+        amount=data.amount_usd,
+        currency=data.crypto_symbol.upper(),
         status="success",
-        details=f"Purchased {crypto_symbol}",
+        details=f"CRYPTO {data.side.upper()}: {crypto_quantity:.8f} @ ${price}. Fee: ${fee_usd}",
         created_at=datetime.utcnow()
     )
     db.add(tx)
     db.commit()
-    db.refresh(tx)
+
+    # ## 6. NOTIFY & AUDIT
+    msg = f"Trade Successful! {data.side.upper()} {crypto_quantity:.8f} {data.crypto_symbol}."
+    send_notification(db, user_id, title="Trade Confirmed", message=msg, n_type="success")
+    
+    background_tasks.add_task(background_log_audit, f"CRYPTO {data.side.upper()}: User {user_id} - ${data.amount_usd}")
+
     return tx
 
 def get_all_transactions(db: Session, status: str = None):
@@ -210,4 +215,5 @@ def get_transaction_receipt(db: Session, tx_id: int, user_id: int):
         return tx
         
     raise HTTPException(status_code=403, detail="Access denied to this receipt")
+
 

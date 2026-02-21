@@ -20,6 +20,8 @@ from app.models.system_config import SystemConfig
 from app.models.audit_log import AuditLog
 from app.models.support import SupportMessage    # ## RESTORED
 from app.models.kyc import KYCRequirement, KYCSubmission # ## NEW
+from app.models.wallet import Wallet
+from app.models.notification import Notification
 # ## -------------------------------------------------------------
 
 # this is the Alembic Config object

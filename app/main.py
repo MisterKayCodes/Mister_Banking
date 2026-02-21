@@ -17,6 +17,7 @@ from app.models.notification import Notification
 from app.models.account import Account
 from app.models.transaction import Transaction
 from app.models.kyc import KYCRequirement, KYCSubmission
+from app.models.wallet import Wallet
 # ## -----------------------------------------------------------
 
 from app.api.auth_routes import router as auth_router

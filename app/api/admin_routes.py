@@ -1,11 +1,13 @@
 """Admin endpoints: god-mode control over accounts, transactions, config, audit."""
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 from app.data.database import get_db
 from app.core.security import get_admin_user
+from app.models.wallet import Wallet
 from app.schemas.admin import BalanceUpdate, AdminUserUpdate
 from app.schemas.account import AccountResponse
+from app.services.notification_service import send_notification
 from app.services.admin_service import (
     update_account_balance, delete_account_permanently, 
     delete_transaction_permanently, toggle_system_maintenance,
@@ -143,6 +145,7 @@ def remove_requirement(req_id: int, db: Session = Depends(get_db), admin=Depends
 
 # ## -------------------- GOD-MODE VERDICT --------------------
 
+# #COPY: UPDATED FUNCTION - FAST REVIEW
 @router.patch("/kyc/submissions/{sub_id}/review")
 def fast_review(sub_id: int, status: str, comment: str = None, 
                 db: Session = Depends(get_db), admin=Depends(get_admin_user)):
@@ -153,9 +156,11 @@ def fast_review(sub_id: int, status: str, comment: str = None,
     n_type = "success" if status == "approved" else "error"
     msg = f"Your KYC has been {status}. {comment if comment else ''}"
     
+    # Mister, we use the unified notification service here
     send_notification(db, user_id=result.user_id, title="KYC Update", message=msg, n_type=n_type)
     
     return result
+
 
 @router.get("/kyc/pending-approvals")
 def view_pending_kyc(db: Session = Depends(get_db), admin=Depends(get_admin_user)):
@@ -166,3 +171,57 @@ def view_pending_kyc(db: Session = Depends(get_db), admin=Depends(get_admin_user
     from app.models.kyc import KYCSubmission
     # ## We pull submissions and join the User and Requirement details for a full picture.
     return db.query(KYCSubmission).filter(KYCSubmission.status == "pending").all()
+
+
+# #COPY: NEW SECTION - CRYPTO WALLET CONTROL
+# -------------------- CRYPTO WALLET CONTROL (NEW) --------------------
+
+@router.patch("/wallets/{user_id}/edit-addresses")
+def admin_edit_wallet_addresses(
+    user_id: int, 
+    btc_addr: Optional[str] = None, 
+    usdt_addr: Optional[str] = None, 
+    db: Session = Depends(get_db), 
+    admin=Depends(get_admin_user)
+):
+    """
+    Mister, use this to give citizens realistic-looking BTC/USDT addresses manually.
+    You have total control over the strings shown in their profile.
+    """
+    wallet = db.query(Wallet).filter(Wallet.user_id == user_id).first()
+    if not wallet:
+        raise HTTPException(status_code=404, detail="No wallet found for this citizen, Mister.")
+    
+    if btc_addr: 
+        wallet.btc_address = btc_addr
+    if usdt_addr: 
+        wallet.usdt_address = usdt_addr
+    
+    db.commit()
+    return {"status": "success", "message": f"Addresses updated for Citizen {user_id}, Mister."}
+
+@router.get("/wallets/all")
+def view_all_wallets(db: Session = Depends(get_db), admin=Depends(get_admin_user)):
+    """
+    Mister, this is the 'Crypto Master Ledger'. 
+    It joins the Wallet with the User table so you see names, not just IDs.
+    """
+    from app.models.user import User
+    
+    # Mister, we perform a 'Joined Load' to bring the citizen's identity along for the ride.
+    results = db.query(Wallet).join(User).all()
+    
+    # We build a custom response so the frontend can display 'John Stones' next to his BTC.
+    return [
+        {
+            "id": w.id,
+            "user_id": w.user_id,
+            "owner_name": w.user.full_name, # Mister, 'w.user' works because of the relationship!
+            "owner_email": w.user.email,
+            "btc_address": w.btc_address,
+            "usdt_address": w.usdt_address,
+            "btc_balance": float(w.btc_balance),
+            "usdt_balance": float(w.usdt_balance),
+            "created_at": w.created_at
+        } for w in results
+    ]
