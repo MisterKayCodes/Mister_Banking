@@ -1,0 +1,43 @@
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 5rem;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 1.5rem;
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 0.75rem;
+  background-color: var(--color-primary);
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-logo span {
+  font-family: 'Crimson Pro', serif;
+  font-weight: 700;
+  color: var(--color-primary-foreground);
+  font-size: 1.5rem;
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+aside.w-20 .sidebar-logo {
+  width: 3rem;
+  height: 3rem;
+}
+
+aside.w-20 .sidebar-logo span {
+  font-size: 1.125rem;
+}
+
+@media (max-width: 1024px) {
+  .sidebar-header {
+    padding: 0 1rem;
+  }
+}
