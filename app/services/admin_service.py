@@ -163,53 +163,65 @@ def update_fees(db: Session, transfer_fee: Decimal, instant_fee: Decimal, backgr
     background_tasks.add_task(background_log_audit, f"Fees updated to {transfer_fee}%/{instant_fee}%, Mister.", admin_id)
     return {"status": "success", "message": "New fees are live, Mister."}
 
+    
 # -------------------- ULTIMATE AUTHORITY POWERS --------------------
 
 def execute_nuclear_user_wipe(db: Session, user_id: int, admin_id: int):
+    """Mister, this is the final solution. Total digital erasure."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="Target user not found in the ledger, Mister.")
+        raise HTTPException(status_code=404, detail="Target user not found, Mister.")
 
     try:
         user_accounts = db.query(Account).filter(Account.user_id == user_id).all()
         account_ids = [acc.id for acc in user_accounts]
 
         if account_ids:
-            # ## Scrubbing history
+            # 1. Scrub Transaction history
             db.query(Transaction).filter(
                 (Transaction.sender_account_id.in_(account_ids)) | 
                 (Transaction.receiver_account_id.in_(account_ids))
             ).delete(synchronize_session=False)
 
-            # ## Wiping accounts
+            # 2. Wiping Fiat Accounts
             db.query(Account).filter(Account.user_id == user_id).delete(synchronize_session=False)
 
+        # 3. Mister, we must also wipe the Crypto Vault!
+        from app.models.wallet import Wallet
+        db.query(Wallet).filter(Wallet.user_id == user_id).delete(synchronize_session=False)
+
+        # 4. Delete the Citizen
         db.delete(user)
-        log_audit(db, f"NUCLEAR WIPE: User {user_id} and all history purged, Mister.", admin_id)
+        log_audit(db, f"NUCLEAR WIPE: User {user_id} and all vaults purged, Mister.", admin_id)
         db.commit()
-        return {"status": "success", "message": f"User {user_id} has been wiped from history."}
+        return {"status": "success", "message": f"User {user_id} has been wiped from the timeline."}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Nuclear strike aborted: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Strike aborted: {str(e)}")
 
 # -------------------- USER & LEDGER OVERVIEW --------------------
 
 def get_all_users_master_list(db: Session):
-    # ## Using outerjoin so users without accounts still show up in the Eye in the Sky.
-    results = db.query(
-        User.id, User.full_name, User.email, User.is_active.label("user_status"),
-        Account.account_number, Account.balance, Account.currency
-    ).outerjoin(Account, User.id == Account.user_id).all()
+    """Mister, the total Eye in the Sky. Fiat and Crypto combined."""
+    from app.models.wallet import Wallet
+    
+    # Mister, we join the User with their Account AND their Wallet
+    results = db.query(User, Account, Wallet).outerjoin(
+        Account, User.id == Account.user_id
+    ).outerjoin(
+        Wallet, User.id == Wallet.user_id
+    ).all()
 
     master_ledger = []
-    for row in results:
+    for user, account, wallet in results:
         master_ledger.append({
-            "user_id": row.id,
-            "name": row.full_name,
-            "email": row.email,
-            "status": "Active" if row.user_status else "Suspended",
-            "account_number": row.account_number if row.account_number else "NO_ACCOUNT",
-            "balance": f"{row.balance} {row.currency}" if row.account_number else "0.00"
+            "user_id": user.id,
+            "name": user.full_name,
+            "email": user.email,
+            "status": "Active" if user.is_active else "Suspended",
+            "fiat_balance": f"{account.balance} {account.currency}" if account else "0.00 USD",
+            "btc_balance": f"{wallet.btc_balance if wallet else 0.0} BTC",
+            "usdt_vault": f"{wallet.usdt_balance if wallet else 0.0} USDT"
         })
     return master_ledger
 
