@@ -2,74 +2,103 @@ import React from 'react';
 import Icon from '../../../components/AppIcon';
 
 const AccountCard = ({ account, onViewDetails }) => {
-  const formatCurrency = (amount, currency = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    })?.format(amount);
-  };
+  const isCrypto = account?.type === 'Crypto';
+  
+  // Mister, using your backend oracle price or a solid fallback
+  const btcPrice = account?.btcPrice || 64500; 
 
-  const getAccountTypeIcon = (type) => {
-    switch (type?.toLowerCase()) {
-      case 'checking':
-        return 'Wallet';
-      case 'savings':
-        return 'PiggyBank';
-      case 'crypto':
-        return 'Bitcoin';
-      default:
-        return 'CreditCard';
+  const btcAmt = isCrypto ? Number(account.balance) : 0;
+  const usdtAmt = isCrypto ? Number(account.secondaryBalance) : 0;
+  
+  // Mister, the valuation logic for the headline
+  const totalValuation = (btcAmt * btcPrice) + usdtAmt;
+
+  const name = account?.name || (isCrypto ? 'Digital Asset Vault' : 'Standard Account');
+  const type = account?.type || 'Checking';
+  const currency = account?.currency || 'USD';
+
+  const formatValue = (amount, curr, isHeadline = false) => {
+    try {
+      if (isHeadline || curr === 'USD') {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+        }).format(amount);
+      }
+      
+      const decimals = curr === 'BTC' ? 8 : 2;
+      return `${new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: decimals
+      }).format(amount)} ${curr}`;
+    } catch (e) {
+      return `${amount} ${curr}`;
     }
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 md:p-8 hover:shadow-warm-md transition-smooth">
+    <div className="bg-card border border-border rounded-2xl p-6 md:p-8 hover:shadow-warm-md transition-smooth flex flex-col h-full">
+      {/* Header Section */}
       <div className="flex items-start justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-12 h-12 md:w-14 md:h-14 rounded-xl bg-accent/10">
-            <Icon 
-              name={getAccountTypeIcon(account?.type)} 
-              size={24} 
-              color="var(--color-accent)" 
-            />
+          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-accent/10 text-accent">
+            <Icon name={isCrypto ? 'Bitcoin' : 'Wallet'} size={24} />
           </div>
           <div>
-            <h3 className="text-base md:text-lg font-heading font-semibold text-foreground">
-              {account?.name}
-            </h3>
-            <p className="text-sm text-muted-foreground caption mt-1">
-              {account?.type}
-            </p>
+            <h3 className="text-base md:text-lg font-heading font-semibold text-foreground">{name}</h3>
+            <p className="text-sm text-muted-foreground caption mt-1">{type}</p>
           </div>
         </div>
-        {account?.status === 'active' && (
-          <span className="flex items-center gap-1.5 px-3 py-1.5 bg-success/10 text-success text-xs font-medium rounded-lg caption">
-            <Icon name="CheckCircle" size={14} color="currentColor" />
-            Active
-          </span>
+        <span className="flex items-center gap-1.5 px-3 py-1.5 bg-success/10 text-success text-xs font-medium rounded-lg">
+          <Icon name="CheckCircle" size={14} />
+          Active
+        </span>
+      </div>
+
+      {/* Balance Section */}
+      <div className="mb-6 flex-grow">
+        <p className="text-sm text-muted-foreground caption mb-2">Total Valuation (USD)</p>
+        <p className="text-3xl md:text-4xl font-heading font-bold text-foreground">
+          {isCrypto ? formatValue(totalValuation, 'USD', true) : formatValue(account.balance, currency)}
+        </p>
+        
+        {isCrypto && (
+          <div className="mt-4 space-y-2 pt-4 border-t border-border/50">
+             <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Bitcoin Holdings</span>
+                <span className="font-mono text-foreground font-medium">{formatValue(btcAmt, 'BTC')}</span>
+             </div>
+             <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Tether Balance</span>
+                <span className="font-mono text-foreground font-medium">{formatValue(usdtAmt, 'USDT')}</span>
+             </div>
+          </div>
         )}
       </div>
-      <div className="mb-6">
-        <p className="text-sm text-muted-foreground caption mb-2">Available Balance</p>
-        <p className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-          {formatCurrency(account?.balance, account?.currency)}
-        </p>
-      </div>
-      <div className="flex items-center justify-between pt-4 border-t border-border">
-        <div>
-          <p className="text-xs text-muted-foreground caption mb-1">Account Number</p>
-          <p className="text-sm font-mono font-medium text-foreground">
-            {account?.accountNumber}
-          </p>
+
+      {/* Footer Section - Conditional Logic Here */}
+      <div className="flex items-center justify-between pt-4 border-t border-border mt-auto">
+        <div className="max-w-[150px]">
+          {!isCrypto ? (
+            <>
+              <p className="text-xs text-muted-foreground caption mb-1">Account Number</p>
+              <p className="text-sm font-mono text-foreground truncate">
+                {account?.account_number || '****'}
+              </p>
+            </>
+          ) : (
+            <div className="flex items-center gap-2 text-accent/60 italic text-xs">
+              <Icon name="ShieldCheck" size={14} />
+              <span>Multi-Asset Secured</span>
+            </div>
+          )}
         </div>
         <button
           onClick={() => onViewDetails(account)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-accent hover:text-accent-foreground hover:bg-accent/10 rounded-lg transition-smooth"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-accent hover:bg-accent/10 rounded-lg transition-smooth"
         >
-          <span>Details</span>
-          <Icon name="ChevronRight" size={16} color="currentColor" />
+          <span>{isCrypto ? 'Manage Vault' : 'View Details'}</span>
+          <Icon name="ArrowUpRight" size={16} />
         </button>
       </div>
     </div>
