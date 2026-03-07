@@ -4,7 +4,7 @@ from app.schemas.user import UserCreate
 from app.core.security import hash_password
 
 def create_user(db: Session, user_data: UserCreate):
-    # ## Mister's User Creation - We don't just take the email, we lock it down.
+    # ## System's User Creation - We don't just take the email, we lock it down.
     # ## We pull the password from user_data and hash it immediately.
     user = User(
         full_name=user_data.full_name,
@@ -23,5 +23,9 @@ def get_users(db: Session):
     return db.query(User).all()
 
 def get_user_by_email(db: Session, email: str):
-    # ## Quick lookup to see if this Mister already has an account.
+    # ## Quick lookup to see if this System already has an account.
     return db.query(User).filter(User.email == email).first()
+
+def get_user_by_id(db: Session, user_id: int):
+    # ## Core identity retrieval. Fast, reliable.
+    return db.query(User).filter(User.id == user_id).first()

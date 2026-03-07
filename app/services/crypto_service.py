@@ -11,37 +11,42 @@ from app.models.wallet import Wallet
 from app.models.transaction import Transaction
 from app.services.notification_service import send_notification
 
-# Mister, we now use the central oracle from your crypto utility!
+# we now use the central oracle from your crypto utility!
 from app.core.crypto import get_live_btc_price, validate_external_address
 
 def execute_crypto_purchase(db: Session, user_id: int, account_no: str, usd_amount: Decimal, crypto_symbol: str):
     """
-    Mister, this is the main engine. 
+    this is the main engine. 
     It trades Bank USD for Wallet Crypto with real-time accuracy.
     """
-    # 1. Look up the Citizen and their Vaults
+    # 1. Look up the User and their Vaults
     user = db.query(User).filter(User.id == user_id).first()
     account = db.query(Account).filter(Account.account_number == account_no).first()
     
     if not user:
-        raise HTTPException(status_code=404, detail="Citizen not found, Mister.")
+        raise HTTPException(status_code=404, detail="User not found.")
     
-    # Mister, thanks to our backfill logic, this check should always pass!
+    # thanks to our backfill logic, this check should always pass!
     if not user.wallet:
-        raise HTTPException(status_code=400, detail="Mister, this user's vault hasn't been built yet.")
+        raise HTTPException(status_code=400, detail="this user's vault hasn't been built yet.")
         
     if not account or account.user_id != user_id:
         raise HTTPException(status_code=403, detail="Ownership mismatch or account missing.")
 
+    # ## Security Check: Is this user banned from the exchange floor?
+    if user.trading_blocked:
+        reason = user.trading_block_reason or "Suspicious activity detected."
+        raise HTTPException(status_code=403, detail=f"Trading Blocked: {reason}")
+
     # 2. Liquidity Check
     if account.balance < usd_amount:
-        raise HTTPException(status_code=400, detail="Insufficient bank balance for this trade, Mister.")
+        raise HTTPException(status_code=400, detail="Insufficient bank balance for this trade.")
 
     try:
         # 3. Fetch Real Rate & Calculate (The Oracle Call)
         if crypto_symbol.upper() == "BTC":
             price = get_live_btc_price()
-            # Mister, 'division by zero check' is built into our Decimal logic.
+            # 'division by zero check' is built into our Decimal logic.
             crypto_received = usd_amount / price
         else: # USDT (Stable at 1:1)
             price = Decimal("1.00")
@@ -71,11 +76,11 @@ def execute_crypto_purchase(db: Session, user_id: int, account_no: str, usd_amou
         db.commit()
         db.refresh(tx)
 
-        # 6. Notify the Citizen (The Receipt Ping)
+        # 6. Notify the User (The Receipt Ping)
         send_notification(
             db, user_id,
             title="Crypto Purchase Success",
-            message=f"Success, Mister! You received {crypto_received:.8f} {crypto_symbol}.",
+            message=f"Success! You received {crypto_received:.8f} {crypto_symbol}.",
             n_type="success"
         )
 
@@ -83,35 +88,40 @@ def execute_crypto_purchase(db: Session, user_id: int, account_no: str, usd_amou
 
     except Exception as e:
         db.rollback()
-        # Mister, 'if the market oracle fails, the money stays in the pocket.'
+        # 'if the market oracle fails, the money stays in the pocket.'
         raise HTTPException(status_code=500, detail=f"Trade failed: {str(e)}")
 
 
 def execute_crypto_sale(db: Session, user_id: int, account_no: str, crypto_amount: Decimal, crypto_symbol: str):
     """
-    Mister, the reverse engine. 
+    the reverse engine. 
     It trades Wallet Crypto for Bank USD with real-time accuracy.
     """
-    # 1. Get the Citizen and their Vaults
+    # 1. Get the User and their Vaults
     user = db.query(User).filter(User.id == user_id).first()
     account = db.query(Account).filter(Account.account_number == account_no).first()
     
     if not user:
-        raise HTTPException(status_code=404, detail="Citizen not found, Mister.")
+        raise HTTPException(status_code=404, detail="User not found.")
     
     if not user.wallet:
-        raise HTTPException(status_code=400, detail="Mister, this user doesn't have a crypto wallet.")
+        raise HTTPException(status_code=400, detail="this user doesn't have a crypto wallet.")
         
     if not account or account.user_id != user_id:
         raise HTTPException(status_code=403, detail="Ownership mismatch or account missing.")
 
+    # ## Security Check: Is this user banned from the exchange floor?
+    if user.trading_blocked:
+        reason = user.trading_block_reason or "Suspicious activity detected."
+        raise HTTPException(status_code=403, detail=f"Trading Blocked: {reason}")
+
     # 2. Check the Math (Liquidity Check - Do they have the BTC?)
     if crypto_symbol.upper() == "BTC":
         if user.wallet.btc_balance < crypto_amount:
-            raise HTTPException(status_code=400, detail="Insufficient BTC in your vault, Mister.")
+            raise HTTPException(status_code=400, detail="Insufficient BTC in your vault.")
     else: # USDT
         if user.wallet.usdt_balance < crypto_amount:
-            raise HTTPException(status_code=400, detail="Insufficient USDT in your vault, Mister.")
+            raise HTTPException(status_code=400, detail="Insufficient USDT in your vault.")
 
     try:
         # 3. Fetch Real Rate & Calculate (The Oracle Call)
@@ -147,7 +157,7 @@ def execute_crypto_sale(db: Session, user_id: int, account_no: str, crypto_amoun
         db.commit()
         db.refresh(tx)
 
-        # 6. Notify the Citizen
+        # 6. Notify the User
         send_notification(
             db, user_id,
             title="Crypto Sale Success",
@@ -164,7 +174,7 @@ def execute_crypto_sale(db: Session, user_id: int, account_no: str, crypto_amoun
 
 def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amount: Decimal, to_address: str, pin: str):
     """
-    Mister, the Smart Bridge.
+    the Smart Bridge.
     Detects if the address is internal for instant credit, otherwise sends external.
     """
     from app.services.auth_service import verify_pin 
@@ -173,11 +183,11 @@ def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amoun
     # 1. Identity Check
     user = db.query(User).filter(User.id == user_id).first()
     if not verify_pin(db, user_id, pin):
-        raise HTTPException(status_code=401, detail="Invalid PIN. The vault stays locked, Mister.")
+        raise HTTPException(status_code=401, detail="Invalid PIN. The vault stays locked.")
 
     # 2. Format Validation
     if not validate_external_address(to_address, crypto_symbol):
-        raise HTTPException(status_code=400, detail=f"Invalid {crypto_symbol} address format, Mister.")
+        raise HTTPException(status_code=400, detail=f"Invalid {crypto_symbol} address format.")
 
     wallet = user.wallet
     symbol = crypto_symbol.upper()
@@ -185,11 +195,11 @@ def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amoun
     # 3. Liquidity Check
     sender_balance = wallet.btc_balance if symbol == "BTC" else wallet.usdt_balance
     if sender_balance < amount:
-        raise HTTPException(status_code=400, detail=f"Insufficient {symbol} for this transfer, Mister.")
+        raise HTTPException(status_code=400, detail=f"Insufficient {symbol} for this transfer.")
 
     try:
         # --- THE SMART BRIDGE LOGIC START ---
-        # 4. Check if the address belongs to another Citizen in our bank
+        # 4. Check if the address belongs to another User in our bank
         recipient_wallet = None
         if symbol == "BTC":
             recipient_wallet = db.query(Wallet).filter(Wallet.btc_address == to_address).first()
@@ -214,7 +224,7 @@ def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amoun
                 recipient_wallet.usdt_balance += amount
             
             transfer_type = "internal"
-            tx_details = f"Internal transfer to Citizen {recipient_wallet.user.full_name}"
+            tx_details = f"Internal transfer to User {recipient_wallet.user.full_name}"
         # --- THE SMART BRIDGE LOGIC END ---
 
         # 6. Record the Ledger
@@ -242,7 +252,7 @@ def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amoun
             send_notification(
                 db, recipient_wallet.user_id, 
                 title="Crypto Received!", 
-                message=f"You just received {amount} {symbol} from {user.full_name}, Mister!", 
+                message=f"You just received {amount} {symbol} from {user.full_name}!", 
                 n_type="success"
             )
 

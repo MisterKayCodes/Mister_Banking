@@ -2,7 +2,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./misterbanking.db")
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./app/data/misterbanking.db")
 
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(

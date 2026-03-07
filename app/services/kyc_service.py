@@ -6,7 +6,7 @@ from fastapi import HTTPException
 # -------------------- ADMIN: RULE MANAGEMENT --------------------
 
 def create_kyc_requirement(db: Session, name: str, description: str, is_required: bool = True):
-    # ## Mister, this lets you add new laws to the bank on the fly.
+    # ## this lets you add new laws to the bank on the fly.
     new_req = KYCRequirement(name=name, description=description, is_required=is_required)
     db.add(new_req)
     db.commit()
@@ -14,17 +14,17 @@ def create_kyc_requirement(db: Session, name: str, description: str, is_required
     return new_req
 
 def delete_kyc_requirement(db: Session, requirement_id: int):
-    # ## Mister, total control: remove a law if it's no longer needed.
+    # ## total control: remove a law if it's no longer needed.
     req = db.query(KYCRequirement).filter(KYCRequirement.id == requirement_id).first()
     if not req:
         raise HTTPException(status_code=404, detail="Requirement not found.")
     
     db.delete(req)
     db.commit()
-    return {"detail": "Requirement deleted, Mister."}
+    return {"detail": "Requirement deleted."}
 
 def get_all_kyc_requirements(db: Session):
-    # ## This shows you the full list of what you're asking from your citizens.
+    # ## This shows you the full list of what you're asking from your users.
     return db.query(KYCRequirement).all()
 
 # -------------------- USER: SUBMISSION LOGIC --------------------
@@ -49,7 +49,7 @@ def submit_kyc_document(db: Session, user_id: int, requirement_id: int, document
         )
         db.add(new_obj)
 
-    # ## MISTER, AUTOMATION: 
+    # ## AUTOMATION: 
     # ## Transition user to pending if they aren't already verified.
     user = db.query(User).filter(User.id == user_id).first()
     if user and user.kyc_status != "verified":
@@ -71,7 +71,7 @@ def review_kyc_submission(db: Session, submission_id: int, status: str, comment:
     
     db.flush() 
 
-    # ## MISTER, THE MAGIC BULLET:
+    # ## THE MAGIC BULLET:
     user = db.query(User).filter(User.id == submission.user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")

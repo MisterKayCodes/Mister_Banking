@@ -7,12 +7,22 @@ from app.core.security import get_admin_user
 from app.models.wallet import Wallet
 from app.schemas.admin import BalanceUpdate, AdminUserUpdate
 from app.schemas.account import AccountResponse
+from app.schemas.user import UserResponse, UserCreate
 from app.services.notification_service import send_notification
+from app.services.user_service import get_user_by_id
 from app.services.admin_service import (
-    update_account_balance, delete_account_permanently, 
-    delete_transaction_permanently, toggle_system_maintenance,
-    execute_nuclear_user_wipe, get_all_users_master_list, update_user_profile_admin
+    get_all_users_master_list,
+    update_user_profile_admin,
+    toggle_trading_block,
+    admin_manual_fiat_deposit,
+    admin_manual_crypto_deposit,
+    update_account_balance,
+    delete_account_permanently, 
+    delete_transaction_permanently,
+    toggle_system_maintenance,
+    execute_nuclear_user_wipe
 )
+from app.schemas.admin import BalanceUpdate, AdminUserUpdate, FiatDepositRequest, CryptoDepositRequest
 from app.schemas.support import SupportMessageResponse, SupportReply
 from app.services.support_service import get_all_admin_messages, send_support_message
 
@@ -26,10 +36,34 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 # -------------------- MASTER VIEW --------------------
 
 @router.get("/users/master-ledger")
-def view_all_citizens(db: Session = Depends(get_db), admin=Depends(get_admin_user)):
+
+# ---------------------------------------------------------------------
+# Promote/Demote a user to/from admin role
+# ---------------------------------------------------------------------
+@router.patch("/users/{user_id}/admin-status")
+def admin_promote_route(user_id: int, data: AdminUserUpdate, db: Session = Depends(get_db), admin=Depends(get_admin_user)):
+    """Toggle is_admin flag for a user. Only admins can call."""
+    return admin_promote_user(db, user_id, data.is_admin, admin.id)
+
+# ---------------------------------------------------------------------
+# Verify/Unverify a user (KYC status)
+# ---------------------------------------------------------------------
+@router.patch("/users/{user_id}/verify-status")
+def admin_verify_route(user_id: int, data: AdminUserUpdate, db: Session = Depends(get_db), admin=Depends(get_admin_user)):
+    """Set kyc_status for a user (verified/pending/unverified)."""
+    return admin_set_verification(db, user_id, data.kyc_status, admin.id)
+
+# ---------------------------------------------------------------------
+# Retrieve a single user's full profile (admin only)
+# ---------------------------------------------------------------------
+@router.get("/users/{user_id}", response_model=UserResponse)
+def view_user_detail(user_id: int, db: Session = Depends(get_db), admin=Depends(get_admin_user)):
+    """Return detailed info for a single user, including accounts and wallet."""
+    return get_user_by_id(db, user_id)
+
+def view_all_users(db: Session = Depends(get_db), admin=Depends(get_admin_user)):
     """
-    Mister, this is your Eye in the Sky. 
-    It returns a full list of users, their statuses, and their 10-digit account numbers.
+    Returns a full list of users, their statuses, and their 10-digit account numbers.
     """
     # ## Calling the service logic we built. 
     # ## Only an admin with a valid token can see this list.
@@ -42,8 +76,7 @@ def admin_edit_user(user_id: int,
                     db: Session = Depends(get_db), 
                     admin=Depends(get_admin_user)):
     """
-    Mister, the 'additionalProp1' is gone. 
-    Use this to rewrite name, email, or account numbers directly.
+    Update core user identity records: name, email, or account numbers.
     """
     # ## We turn your form into a dictionary, but we IGNORE anything you left blank.
     # ## This ensures we don't accidentally wipe data we didn't mean to touch.
@@ -53,7 +86,7 @@ def admin_edit_user(user_id: int,
 
 @router.patch("/accounts/{account_id}/stealth-balance", response_model=AccountResponse)
 def stealth_balance_edit(account_id: int, data: BalanceUpdate,
-                         background_tasks: BackgroundTasks, # ## Added this to match the service, Mister.
+                         background_tasks: BackgroundTasks,
                          db: Session = Depends(get_db),
                          admin=Depends(get_admin_user)):
     # ## The ghost edit. Invisible to the user, but noted in our logs.
@@ -84,12 +117,12 @@ def set_maintenance(enabled: bool,
 @router.post("/system/broadcast")
 def send_global_alert(title: str, message: str, n_type: str = "info", 
                       db: Session = Depends(get_db), admin=Depends(get_admin_user)):
-    """Mister, use this to send a message to EVERY user in the bank at once."""
+    """Transmits a message to every user in the system simultaneously."""
     from app.models.user import User
     users = db.query(User).all()
     for user in users:
         send_notification(db, user_id=user.id, title=title, message=message, n_type=n_type)
-    return {"status": "success", "message": f"Broadcast sent to {len(users)} citizens."}
+    return {"status": "success", "message": f"Broadcast sent to {len(users)} users."}
 
 @router.delete("/users/{user_id}/nuclear")
 def nuclear_wipe_route(user_id: int, db: Session = Depends(get_db), admin=Depends(get_admin_user)):
@@ -98,12 +131,18 @@ def nuclear_wipe_route(user_id: int, db: Session = Depends(get_db), admin=Depend
     
     return execute_nuclear_user_wipe(db, user_id, admin.id)
 
+@router.post("/users/create", response_model=UserResponse)
+def admin_create_user(data: UserCreate, db: Session = Depends(get_db), admin=Depends(get_admin_user)):
+    """Creates a new user account directly from the admin dashboard."""
+    from app.services.auth_service import register_user
+    return register_user(db, data.full_name, data.email, data.date_of_birth, data.password)
+
 # -------------------- SUPPORT COMMAND CENTER --------------------
 
 @router.get("/support/inbox", response_model=List[SupportMessageResponse])
 def view_support_inbox(db: Session = Depends(get_db), admin=Depends(get_admin_user)):
     """
-    Mister, this pulls all messages sent by users that haven't been replied to yet.
+    Retrieves all incoming support messages that require a response.
     """
     # ## We use the service to filter for non-admin messages.
     return get_all_admin_messages(db)
@@ -116,8 +155,7 @@ def reply_to_user(
     admin=Depends(get_admin_user)
 ):
     """
-    Mister, use this to send a message back to a citizen. 
-    It will appear in their history with the 'is_from_admin' flag set to True.
+    Appends an admin reply to the user's support history.
     """
     # ## We reuse the sender service but force 'is_admin=True'
     # ## The 'subject' is set to 'Admin Reply' to keep the thread clear.
@@ -140,7 +178,7 @@ def add_requirement(data: KYCRequirementCreate, db: Session = Depends(get_db), a
 
 @router.delete("/kyc/rules/{req_id}")
 def remove_requirement(req_id: int, db: Session = Depends(get_db), admin=Depends(get_admin_user)):
-    # ## Wipe a requirement and all user-uploaded evidence for it.
+    # Delete a requirement and all associated evidence.
     return delete_kyc_requirement(db, req_id)
 
 # ## -------------------- GOD-MODE VERDICT --------------------
@@ -152,11 +190,7 @@ def fast_review(sub_id: int, status: str, comment: str = None,
     # 1. Execute the verdict in the database
     result = review_kyc_submission(db, sub_id, status, comment)
     
-    # 2. MISTER'S PING: Tell the user the news!
-    n_type = "success" if status == "approved" else "error"
-    msg = f"Your KYC has been {status}. {comment if comment else ''}"
-    
-    # Mister, we use the unified notification service here
+    # Administrative notification transmission
     send_notification(db, user_id=result.user_id, title="KYC Update", message=msg, n_type=n_type)
     
     return result
@@ -165,8 +199,7 @@ def fast_review(sub_id: int, status: str, comment: str = None,
 @router.get("/kyc/pending-approvals")
 def view_pending_kyc(db: Session = Depends(get_db), admin=Depends(get_admin_user)):
     """
-    Mister, this pulls only the citizens who have 'pending' documents.
-    It's your 'Morning To-Do List' for verification.
+    Retrieves all kyc submissions with 'pending' status for review.
     """
     from app.models.kyc import KYCSubmission
     # ## We pull submissions and join the User and Requirement details for a full picture.
@@ -185,12 +218,11 @@ def admin_edit_wallet_addresses(
     admin=Depends(get_admin_user)
 ):
     """
-    Mister, use this to give citizens realistic-looking BTC/USDT addresses manually.
-    You have total control over the strings shown in their profile.
+    Allows manual updates to BTC and USDT wallet addresses for a user.
     """
     wallet = db.query(Wallet).filter(Wallet.user_id == user_id).first()
     if not wallet:
-        raise HTTPException(status_code=404, detail="No wallet found for this citizen, Mister.")
+        raise HTTPException(status_code=404, detail="No wallet found for this user.")
     
     if btc_addr: 
         wallet.btc_address = btc_addr
@@ -198,17 +230,16 @@ def admin_edit_wallet_addresses(
         wallet.usdt_address = usdt_addr
     
     db.commit()
-    return {"status": "success", "message": f"Addresses updated for Citizen {user_id}, Mister."}
+    return {"status": "success", "message": f"Addresses updated for user {user_id}."}
 
 @router.get("/wallets/all")
 def view_all_wallets(db: Session = Depends(get_db), admin=Depends(get_admin_user)):
     """
-    Mister, this is the 'Crypto Master Ledger'. 
-    It joins the Wallet with the User table so you see names, not just IDs.
+    Returns a unified ledger of all cryptocurrency wallets and their owners.
     """
     from app.models.user import User
     
-    # Mister, we perform a 'Joined Load' to bring the citizen's identity along for the ride.
+    # Perform a joined load to include user identity details.
     results = db.query(Wallet).join(User).all()
     
     # We build a custom response so the frontend can display 'John Stones' next to his BTC.
@@ -216,12 +247,36 @@ def view_all_wallets(db: Session = Depends(get_db), admin=Depends(get_admin_user
         {
             "id": w.id,
             "user_id": w.user_id,
-            "owner_name": w.user.full_name, # Mister, 'w.user' works because of the relationship!
+            "owner_name": w.user.full_name, # User relationship load
             "owner_email": w.user.email,
             "btc_address": w.btc_address,
             "usdt_address": w.usdt_address,
             "btc_balance": float(w.btc_balance),
             "usdt_balance": float(w.usdt_balance),
+            "trading_blocked": w.user.trading_blocked,
             "created_at": w.created_at
         } for w in results
     ]
+
+@router.post("/users/{user_id}/trade-block")
+def admin_toggle_trade_block(user_id: int, blocked: bool, reason: str, 
+                             background_tasks: BackgroundTasks,
+                             db: Session = Depends(get_db), 
+                             admin=Depends(get_admin_user)):
+    """Suspends a user's access to the Cryptocurrency Exchange."""
+    return toggle_trading_block(db, user_id, blocked, reason, background_tasks, admin.id)
+
+# -------------------- MANUAL DEPOSITS --------------------
+
+@router.post("/deposits/fiat")
+def manual_fiat_deposit(data: FiatDepositRequest, background_tasks: BackgroundTasks,
+                        db: Session = Depends(get_db), admin=Depends(get_admin_user)):
+    """Executes a manual fiat deposit and creates a transaction record for the user."""
+    from decimal import Decimal
+    return admin_manual_fiat_deposit(db, data.account_id, Decimal(str(data.amount)), data.tag, background_tasks, admin.id)
+
+@router.post("/deposits/crypto")
+def manual_crypto_deposit(data: CryptoDepositRequest, background_tasks: BackgroundTasks,
+                          db: Session = Depends(get_db), admin=Depends(get_admin_user)):
+    """Executes a manual crypto deposit into a user's BTC or USDT vault."""
+    return admin_manual_crypto_deposit(db, data.user_id, data.coin, data.amount, data.tag, background_tasks, admin.id)

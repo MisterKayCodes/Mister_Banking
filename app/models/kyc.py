@@ -5,7 +5,7 @@ from app.data.database import Base
 
 class KYCRequirement(Base):
     """
-    Mister, this is your Rulebook.
+    this is your Rulebook.
     Add 'Passport', 'Utility Bill', or 'Tax ID' here.
     """
     __tablename__ = "kyc_requirements"
@@ -22,7 +22,7 @@ class KYCRequirement(Base):
 
 class KYCSubmission(Base):
     """
-    Mister, this is the Citizen's Proof.
+    this is the User's Proof.
     Every row here is one document uploaded by a user.
     """
     __tablename__ = "kyc_submissions"
@@ -33,7 +33,7 @@ class KYCSubmission(Base):
     
     document_url = Column(String, nullable=False)    # The path to the file
     status = Column(String, default="pending")       # pending, approved, rejected
-    admin_comment = Column(String, nullable=True)    # "Mister says: This photo is blurry"
+    admin_comment = Column(String, nullable=True)    # "System says: This photo is blurry"
     
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     created_at = Column(DateTime(timezone=True), server_default=func.now())

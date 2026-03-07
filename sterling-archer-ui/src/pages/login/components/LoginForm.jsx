@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import Icon from '../../../components/AppIcon';
-import api from '../../../api/axios'; // Mister, the bridge to your FastAPI
+import api from '../../../api/axios'; // The bridge to your FastAPI
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -49,7 +49,7 @@ const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      // Mister, we hit your FastAPI login endpoint
+      // Hit the FastAPI login endpoint
       const response = await api.post('/auth/login', {
         email: formData.email,
         password: formData.password
@@ -59,14 +59,14 @@ const LoginForm = () => {
       const { access_token } = response.data;
 
       if (access_token) {
-        // We store the key to the vault in the browser
-        localStorage.setItem('mister_token', access_token);
-        
+        // Store the authentication token in the browser
+        localStorage.setItem('sa_auth_token', access_token);
+
         // Success! Off to the dashboard
         navigate('/dashboard');
       }
     } catch (error) {
-      // Mister, we catch the "Wrong key" message from your service
+      // Catch the error message from the service
       const serverMessage = error.response?.data?.detail || 'Invalid email or password. Access denied.';
       setErrors({ password: serverMessage });
     } finally {

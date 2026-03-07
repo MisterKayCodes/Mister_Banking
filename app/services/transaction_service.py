@@ -24,19 +24,19 @@ from app.schemas.wallet import CryptoTradeRequest
 # -------------------- MISTER'S PRIVATE HELPERS --------------------
 
 def _check_kyc_approval(db: Session, user_id: int) -> User:
-    # ## Mister, the gatekeeper function is now dual-purpose.
+    # Security gatekeeper function to ensure account exists and is valid.
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
     return user
 
 def _get_account_by_number(db: Session, account_number: str, active_only: bool = True) -> Account:
-    # ## Identity lookup via the 10-digit ledger ID.
+    # Identity lookup via the 10-digit ledger ID.
     account = db.query(Account).filter(Account.account_number == account_number).first()
     if not account:
         raise HTTPException(status_code=404, detail=f"Account {account_number} not found.")
     if active_only and not account.is_active:
-        raise HTTPException(status_code=400, detail="This account is currently suspended, Mister.")
+        raise HTTPException(status_code=400, detail="This account is currently suspended.")
     return account
 
 # -------------------- CORE TRANSACTION LOGIC --------------------
@@ -45,7 +45,7 @@ def create_transaction(db: Session, user_id: int, data: TransactionCreate):
     # ## 0. THE SECURITY GATE (PIN Verification)
     user = _check_kyc_approval(db, user_id)
     if not user.pin_hash:
-        raise HTTPException(status_code=400, detail="Transaction PIN not set, Mister.")
+        raise HTTPException(status_code=400, detail="Transaction PIN not set.")
     
     if not verify_password(data.pin, user.pin_hash):
         send_notification(db, user_id, title="Security Alert", message="Incorrect PIN attempt.", n_type="warning")
@@ -114,19 +114,19 @@ def execute_crypto_trade(db: Session, user_id: int, data: CryptoTradeRequest, ba
     # ## 1. ADMIN OVERRIDE
     is_active = get_system_config_value(db, "crypto_trading_enabled", default="true")
     if is_active.lower() != "true":
-        raise HTTPException(status_code=403, detail="Mister, the crypto markets are currently frozen by the Founder.")
+        raise HTTPException(status_code=403, detail="The crypto markets are currently frozen by the Foundation.")
 
     # ## 2. ACCESS CHECK
     user = _check_kyc_approval(db, user_id)
     if user.kyc_status != "verified":
-        raise HTTPException(status_code=403, detail="The Crypto Vault requires a 'verified' status, Mister.")
+        raise HTTPException(status_code=403, detail="The Crypto Vault requires a 'verified' identity status.")
 
     account = _get_account_by_number(db, data.account_no)
     if account.user_id != user_id:
         raise HTTPException(status_code=403, detail="Ownership mismatch.")
 
     if not user.wallet:
-        raise HTTPException(status_code=400, detail="Mister, this citizen does not have a wallet initialized.")
+        raise HTTPException(status_code=400, detail="This user does not have an active cryptocurrency wallet initialized.")
 
     # ## 3. MATH & PRICING
     fee_pct_str = get_system_config_value(db, "crypto_trade_fee_percent", default="0.5")
@@ -188,8 +188,7 @@ def get_all_transactions(db: Session, status: str = None):
     return query.all()
 
 def get_transactions_for_account(db: Session, account_id: int):
-    # ## Mister, this finds every move linked to this internal ID.
-    # ## We keep this for the 'History' tab in the app.
+    # Locates all transactions linked to an internal ID for ledger history views.
     return db.query(Transaction).filter(
         (Transaction.sender_account_id == account_id) | 
         (Transaction.receiver_account_id == account_id)
@@ -198,8 +197,7 @@ def get_transactions_for_account(db: Session, account_id: int):
 # -------------------- LOOKUP & HISTORY RESTORED --------------------
 
 def get_transaction_receipt(db: Session, tx_id: int, user_id: int):
-    # ## Mister, we check ownership before showing the receipt. 
-    # ## No one peeks at another citizen's business.
+    # Ownership verification required before displaying potentially sensitive receipts.
     tx = db.query(Transaction).filter(Transaction.id == tx_id).first()
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
@@ -217,3 +215,20 @@ def get_transaction_receipt(db: Session, tx_id: int, user_id: int):
     raise HTTPException(status_code=403, detail="Access denied to this receipt")
 
 
+
+def get_user_transactions(db: Session, user_id: int):
+    user_accounts = db.query(Account).filter(Account.user_id == user_id).all()
+    identifiers = [acc.account_number for acc in user_accounts if acc.account_number]
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if user and user.wallet:
+        if user.wallet.btc_address: identifiers.append(user.wallet.btc_address)
+        if user.wallet.usdt_address: identifiers.append(user.wallet.usdt_address)
+
+    # Query filtering across fiat accounts and mapped crypto wallet addresses
+    transactions = db.query(Transaction).filter(
+        (Transaction.sender_no.in_(identifiers)) | 
+        (Transaction.receiver_no.in_(identifiers))
+    ).order_by(Transaction.created_at.desc()).all()
+
+    return transactions

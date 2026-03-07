@@ -21,7 +21,7 @@ class SystemConfigResponse(BaseModel):
     description: str
 
     class Config:
-        # ## Allows Pydantic to read SQLAlchemy models directly, Mister.
+        # ## Allows Pydantic to read SQLAlchemy models directly.
         from_attributes = True
 
 class AuditLogResponse(BaseModel):
@@ -33,7 +33,7 @@ class AuditLogResponse(BaseModel):
     timestamp: Optional[datetime] = None
 
 class AdminUserUpdate(BaseModel):
-    # ## Mister, these are the ONLY things you can change.
+    # ## these are the ONLY things you can change.
     # ## If you add a 'phone_number' to your Database later, 
     # ## you just add one line here and it 'plugs in' automatically.
     full_name: Optional[str] = None
@@ -41,7 +41,21 @@ class AdminUserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     account_number: Optional[str] = None
     is_active: Optional[bool] = None
+    is_admin: Optional[bool] = None
     kyc_status: Optional[str] = None
+    trading_blocked: Optional[bool] = None
+    trading_block_reason: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class FiatDepositRequest(BaseModel):
+    account_id: int
+    amount: float
+    tag: str
+
+class CryptoDepositRequest(BaseModel):
+    user_id: int
+    coin: str # 'btc' or 'usdt'
+    amount: float
+    tag: str

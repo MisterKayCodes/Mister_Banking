@@ -5,7 +5,7 @@ from app.data.database import Base
 
 class Wallet(Base):
     """
-    Mister, this is the dedicated Crypto Vault. 
+    this is the dedicated Crypto Vault. 
     It handles the high-precision math that Bitcoin requires.
     """
     __tablename__ = "wallets"
@@ -14,7 +14,7 @@ class Wallet(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
     
     # ## Realistic Addresses (Admin-editable as requested)
-    # ## Mister, these will look like 'bc1...' or '0x...'
+    # ## these will look like 'bc1...' or '0x...'
     btc_address = Column(String, unique=True, index=True, nullable=True)
     usdt_address = Column(String, unique=True, index=True, nullable=True)
 
@@ -25,5 +25,5 @@ class Wallet(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # ## Linking back to the Citizen
+    # ## Linking back to the User
     user = relationship("User", back_populates="wallet")

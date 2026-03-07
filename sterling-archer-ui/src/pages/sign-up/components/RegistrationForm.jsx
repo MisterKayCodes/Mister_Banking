@@ -4,13 +4,14 @@ import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import Icon from '../../../components/AppIcon';
-import api from '../../../api/axios'; // Mister, make sure this file exists!
+import api from '../../../api/axios'; // Ensure this file exists!
 
 const RegistrationForm = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    dateOfBirth: '',
     password: '',
     confirmPassword: '',
     agreeToTerms: false
@@ -32,6 +33,11 @@ const RegistrationForm = () => {
     if (!email) return 'Email address is required';
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex?.test(email)) return 'Please enter a valid email address';
+    return '';
+  };
+
+  const validateDateOfBirth = (dob) => {
+    if (!dob) return 'Date of Birth is required';
     return '';
   };
 
@@ -57,7 +63,8 @@ const RegistrationForm = () => {
     switch (field) {
       case 'fullName': error = validateFullName(value); break;
       case 'email': error = validateEmail(value); break;
-      case 'password': 
+      case 'dateOfBirth': error = validateDateOfBirth(value); break;
+      case 'password':
         error = validatePassword(value);
         if (formData?.confirmPassword) {
           setErrors(prev => ({ ...prev, confirmPassword: validateConfirmPassword(formData?.confirmPassword, value) }));
@@ -75,6 +82,7 @@ const RegistrationForm = () => {
     const newErrors = {
       fullName: validateFullName(formData?.fullName),
       email: validateEmail(formData?.email),
+      dateOfBirth: validateDateOfBirth(formData?.dateOfBirth),
       password: validatePassword(formData?.password),
       confirmPassword: validateConfirmPassword(formData?.confirmPassword, formData?.password)
     };
@@ -89,10 +97,11 @@ const RegistrationForm = () => {
     setIsLoading(true);
 
     try {
-      // Mister, we map 'fullName' to 'full_name' for the FastAPI UserCreate schema
+      // Map 'fullName' to 'full_name' for the FastAPI UserCreate schema
       const payload = {
         full_name: formData.fullName,
         email: formData.email,
+        date_of_birth: formData.dateOfBirth,
         password: formData.password
       };
 
@@ -100,11 +109,11 @@ const RegistrationForm = () => {
       const response = await api.post('/auth/register', payload);
 
       if (response.data) {
-        navigate('/login', { 
-          state: { 
-            message: 'Account created successfully! Welcome to the Trust, Mister.',
-            email: formData?.email 
-          } 
+        navigate('/login', {
+          state: {
+            message: 'Account created successfully! Welcome to the Trust.',
+            email: formData?.email
+          }
         });
       }
     } catch (error) {
@@ -155,6 +164,16 @@ const RegistrationForm = () => {
         required
         disabled={isLoading}
       />
+      <Input
+        label="Date of Birth"
+        type="date"
+        placeholder=""
+        value={formData?.dateOfBirth}
+        onChange={(e) => handleInputChange('dateOfBirth', e?.target?.value)}
+        error={errors?.dateOfBirth}
+        required
+        disabled={isLoading}
+      />
       <div className="space-y-2">
         <div className="relative">
           <Input
@@ -186,18 +205,17 @@ const RegistrationForm = () => {
                   style={{ width: `${(passwordStrength?.strength / 5) * 100}%` }}
                 />
               </div>
-              <span className={`text-xs font-medium caption ${
-                passwordStrength?.strength <= 2 ? 'text-error' :
+              <span className={`text-xs font-medium caption ${passwordStrength?.strength <= 2 ? 'text-error' :
                 passwordStrength?.strength <= 3 ? 'text-warning' :
-                passwordStrength?.strength <= 4 ? 'text-accent': 'text-success'
-              }`}>
+                  passwordStrength?.strength <= 4 ? 'text-accent' : 'text-success'
+                }`}>
                 {passwordStrength?.label}
               </span>
             </div>
           </div>
         )}
       </div>
-      
+
       <div className="relative">
         <Input
           label="Confirm Password"

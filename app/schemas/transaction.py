@@ -14,7 +14,7 @@ class TransactionCreate(BaseModel):
     amount: Decimal = Field(..., gt=0)
     
     # ## -------------------- #COPY: THE MISSING PIN --------------------
-    # Mister, this is the fix for the AttributeError. 
+    # this is the fix for the AttributeError. 
     # We need this slot to receive the key from the UI or tests.
     pin: str = Field(..., min_length=4, max_length=6) 
     # ## -----------------------------------------------------------------
@@ -32,10 +32,10 @@ class TransactionCreate(BaseModel):
 
     @model_validator(mode='after')
     def validate_logic(self) -> 'TransactionCreate':
-        # ## Mister, one validator to rule them all.
+        # ## one validator to rule them all.
         if self.transfer_type == TransferType.INTERNAL:
             if not self.to_account_no:
-                raise ValueError("Internal moves require a 10-digit recipient number, Mister.")
+                raise ValueError("Internal moves require a 10-digit recipient number.")
         
         elif self.transfer_type == TransferType.EXTERNAL:
             # Check the "Big Four" for overseas wires
@@ -48,20 +48,20 @@ class BuyCryptoRequest(BaseModel):
     account_no: str = Field(..., min_length=10, max_length=10)
     crypto_symbol: str = Field(..., pattern="^(BTC|ETH|USDT)$")
     amount_usdt: Decimal = Field(..., gt=0)
-    pin: str = Field(..., min_length=4, max_length=6) # Mister, crypto needs a PIN too!
+    pin: str = Field(..., min_length=4, max_length=6) # crypto needs a PIN too!
 
 class SellCryptoRequest(BaseModel):
     account_no: str = Field(..., min_length=10, max_length=10)
     crypto_symbol: str = Field(..., pattern="^(BTC|ETH|USDT)$")
     amount_usdt: Decimal = Field(..., gt=0)
-    pin: str = Field(..., min_length=4, max_length=6) # Mister, crypto needs a PIN too!
+    pin: str = Field(..., min_length=4, max_length=6) # crypto needs a PIN too!
 
 class TransactionResponse(BaseModel):
     id: int
     reference: str
     transfer_type: TransferType
     
-    # ## Mister, these are the 'Identity' strings we added to the DB
+    # ## these are the 'Identity' strings we added to the DB
     sender_no: str 
     receiver_no: Optional[str] = None
     
@@ -96,7 +96,7 @@ class TransactionReceipt(BaseModel):
 
 
 class CryptoTransferRequest(BaseModel):
-    """Mister, the blueprint for sending digital gold to the world."""
+    """the blueprint for sending digital gold to the world."""
     account_no: str = Field(..., min_length=10, max_length=10)
     crypto_symbol: str = Field(..., pattern="^(BTC|ETH|USDT)$")
     amount_crypto: Decimal = Field(..., gt=0) # We use 'amount_crypto' to avoid confusion with USD
@@ -104,7 +104,7 @@ class CryptoTransferRequest(BaseModel):
     pin: str = Field(..., min_length=4, max_length=6)
 
 class CryptoAddressResponse(BaseModel):
-    """Mister, a clean way to show the citizen their vault addresses."""
+    """a clean way to show the user their vault addresses."""
     btc_address: str
     usdt_address: str
     eth_address: Optional[str] = None

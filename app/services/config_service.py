@@ -5,11 +5,11 @@ from app.models.system_config import SystemConfig
 from app.models.kyc import KYCRequirement
 from app.models.user import User
 from app.models.account import Account
-from app.models.wallet import Wallet # Mister, the Vault is now integrated
+from app.models.wallet import Wallet # the Vault is now integrated
 from app.core.security import hash_password 
-from app.core.crypto import generate_realistic_address # Mister's Crypto Engine
+from app.core.crypto import generate_realistic_address # System's Crypto Engine
 
-# ## The default rules for Mister's Bank. 
+# ## The default rules for System's Bank. 
 DEFAULTS = {
     "transfer_fee_percent": ("1.0", "Fee percentage for standard transfers"),
     "instant_transfer_fee_percent": ("2.0", "Fee percentage for instant transfers"),
@@ -45,16 +45,16 @@ def seed_defaults(db: Session):
         db.commit()
     except Exception as e:
         db.rollback()
-        print(f"Mister, KYC seeding skipped: {e}")
+        print(f"KYC seeding skipped: {e}")
 
 def seed_test_users(db: Session):
-    """Mister, this ensures the elite have both a bank account and a crypto vault."""
+    """this ensures the elite have both a bank account and a crypto vault."""
     
     # ## 1. THE FOUNDER (Admin)
     admin = db.query(User).filter(User.email == "admin@gmail.com").first()
     if not admin:
         admin = User(
-            full_name="Mister Admin",
+            full_name="System Administrator",
             email="admin@gmail.com",
             password_hash=hash_password("admin"), 
             is_admin=True,
@@ -80,7 +80,7 @@ def seed_test_users(db: Session):
             usdt_address=generate_realistic_address("USDT")
         ))
 
-    # ## 2. THE CITIZEN (John Stones)
+    # ## 2. THE USER (John Stones)
     john = db.query(User).filter(User.email == "johnstones@gmail.com").first()
     if not john:
         john = User(
@@ -113,7 +113,7 @@ def seed_test_users(db: Session):
     db.commit()
 
     # ## -------------------- THE MISTER BACKFILL --------------------
-    # Mister, we find any citizen missing their vault and build it now.
+    # we find any user missing their vault and build it now.
     # This is why the admin list was empty before!
     users_without_wallets = db.query(User).filter(~User.wallet.has()).all()
     if users_without_wallets:
@@ -124,7 +124,7 @@ def seed_test_users(db: Session):
                 usdt_address=generate_realistic_address("USDT")
             ))
         db.commit()
-        print(f"Mister, I've just secured {len(users_without_wallets)} citizen vaults.")
+        print(f"I've just secured {len(users_without_wallets)} user vaults.")
     # ## -----------------------------------------------------------
 
 def get_config_value(db: Session, key: str) -> str:

@@ -1,26 +1,18 @@
-# Mister Banking API
+# Mister Banking System
 
-A fully dynamic, configurable banking system built with FastAPI, PostgreSQL, and SQLAlchemy. Features a god-mode admin panel, BTC/USDT crypto support, and dynamic fee/delay/message configuration via SystemConfig.
-
-## Features
-
-- **User Management**: Registration, JWT login, PIN creation/reset, profile viewing
-- **Multi-Account Support**: Users can hold multiple USDT and BTC accounts
-- **Transactions**: Send/receive money with dynamic fees, instant or delayed processing
-- **Crypto Purchases**: Instantly buy BTC or USDT
-- **Transaction States**: pending → processing → success → reversed/blocked
-- **Transaction Receipts**: Reference IDs, timestamps, amounts, fees
-- **God-Mode Admin Panel**: Full control over accounts, transactions, fees, delays, messages
-- **Dynamic SystemConfig**: No hardcoded values — all fees, delays, and messages are configurable
-- **Audit Trail**: Every admin action is logged with background tasks
+A fully dynamic, configurable banking system split into a FastAPI backend and a React/Vite frontend. Features a god-mode admin panel, integrated Crypto Vault for BTC/USDT handling, and dynamic fee/delay/message configuration via SystemConfig.
 
 ## Tech Stack
+- **Backend**: FastAPI, Pydantic v2, SQlite, SQLAlchemy ORM, Alembic
+- **Frontend**: React 18, Vite, Tailwind CSS, Redux, React Router Dom
+- **Security**: JWT Authentication, bcrypt password hashing, IDOR (Insecure Direct Object Reference) Protection on sensitive routes (e.g. Vault Access).
 
-- **FastAPI** with Pydantic v2 validation
-- **PostgreSQL** with SQLAlchemy ORM
-- **Alembic** for database migrations
-- **JWT Authentication** via python-jose
-- **bcrypt** password hashing via passlib
+## Features
+- **User Management**: Registration, JWT login, PIN creation/reset, profile viewing.
+- **Crypto Vault**: Multi-asset support for BTC and USDT. Real-time balance and transaction tracking logic.
+- **Transactions**: Send/receive money with dynamic fees, instant or delayed processing.
+- **God-Mode Admin Panel**: Full control over accounts, transactions, fees, delays, messages.
+- **Security Protocols (IDOR Protection)**: Strong validation to prevent unauthorized users from viewing or manipulating other citizens' vaults or transactions. All vault requests verify ownership against the active JWT.
 
 ## API Endpoints
 
@@ -45,13 +37,15 @@ A fully dynamic, configurable banking system built with FastAPI, PostgreSQL, and
 | GET | `/accounts/` | List user's accounts |
 | GET | `/accounts/{id}` | Get specific account |
 
+### Wallets & Crypto Vault (`/wallets` via DB)
+*Note: Backend stores BTC/USDT in `wallets` table, verified by IDOR protection rules.*
+
 ### Transactions (`/transactions`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/transactions/` | Create transfer (instant or pending) |
 | POST | `/transactions/buy-crypto` | Buy BTC or USDT instantly |
 | GET | `/transactions/` | List transactions |
-| GET | `/transactions/{id}/receipt` | Get transaction receipt |
 
 ### Admin (`/admin`) — Requires admin role
 | Method | Endpoint | Description |
@@ -60,27 +54,15 @@ A fully dynamic, configurable banking system built with FastAPI, PostgreSQL, and
 | PATCH | `/admin/accounts/{id}/status` | Activate/deactivate account |
 | PATCH | `/admin/accounts/{id}/balance` | Adjust account balance |
 | POST | `/admin/transactions/{id}/approve` | Approve pending transaction |
-| POST | `/admin/transactions/{id}/block` | Block transaction, refund sender |
-| POST | `/admin/transactions/{id}/reverse` | Reverse successful transaction |
-| GET | `/admin/transactions` | List all transactions (filterable) |
-| GET | `/admin/config` | View all system config values |
-| PUT | `/admin/config/{key}` | Update a config value |
-| GET | `/admin/audit-logs` | View admin audit trail |
 
-## SystemConfig Defaults (Auto-Seeded)
-
-| Key | Default Value | Description |
-|-----|---------------|-------------|
-| `transfer_fee_percent` | 1.0 | Fee % for standard transfers |
-| `instant_transfer_fee_percent` | 2.0 | Fee % for instant transfers |
-| `transaction_delay_minutes` | 5 | Processing delay in minutes |
-| `blocked_message` | "Transaction temporarily blocked" | Message for blocked transactions |
-| `reversal_message` | "Transaction reversed by admin" | Message for reversed transactions |
-
-## Running
+## Running the Application
+You can use the provided `start.bat` script on Windows to automatically open both the frontend and backend servers.
 
 ```bash
+# Backend (Manual)
 uvicorn app.main:app --host 0.0.0.0 --port 5000 --reload
-```
 
+# Frontend (Manual)
+npm start
+```
 Swagger docs available at `/docs`.

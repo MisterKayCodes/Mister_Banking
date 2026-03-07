@@ -16,4 +16,4 @@ class NotificationRead(NotificationBase):
     created_at: datetime
 
     class Config:
-        from_attributes = True # Mister, this tells Pydantic to read SQLAlchemy models!
+        from_attributes = True # this tells Pydantic to read SQLAlchemy models!

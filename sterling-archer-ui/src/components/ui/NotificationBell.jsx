@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import api from '../../api/axios'; // Mister, your custom sentry with the token!
+import api from '../../api/axios'; // The custom sentry with the token!
 import Icon from '../AppIcon';
 
 const NotificationBell = () => {
@@ -10,21 +10,21 @@ const NotificationBell = () => {
 
   const fetchNotifications = async () => {
     try {
-      // Mister, hitting your /notifications/ endpoint directly
+      // Hitting the /notifications/ endpoint directly
       const response = await api.get('/notifications/');
       const data = response.data;
 
       setNotifications(data);
-      // Mister, note the 'is_read' check to match your SQLAlchemy model!
+      // 'is_read' check to match the SQLAlchemy model!
       setUnreadCount(data.filter(n => !n.is_read).length);
     } catch (error) {
-      console.error('Mister, the alert system is down:', error);
+      console.error('The alert system is down:', error);
     }
   };
 
   useEffect(() => {
     fetchNotifications();
-    // Mister, polling every 30 seconds to keep the vault updated
+    // Polling every 30 seconds to keep the vault updated
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -44,26 +44,26 @@ const NotificationBell = () => {
 
   const handleMarkAsRead = async (id) => {
     try {
-      // Mister, calling your PUT /{id}/read route
+      // Calling the PUT /{id}/read route
       await api.put(`/notifications/${id}/read`);
-      
+
       setNotifications(prev =>
         prev.map(n => n.id === id ? { ...n, is_read: true } : n)
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('Mister, failed to silence the alert:', error);
+      console.error('Failed to silence the alert:', error);
     }
   };
 
   const handleClearAll = async () => {
     try {
-      // Mister, calling your DELETE /clear-all route for a fresh start
+      // Calling the DELETE /clear-all route for a fresh start
       await api.delete('/notifications/clear-all');
       setNotifications([]);
       setUnreadCount(0);
     } catch (error) {
-      console.error('Mister, the wipe failed:', error);
+      console.error('The wipe failed:', error);
     }
   };
 
@@ -114,7 +114,7 @@ const NotificationBell = () => {
             {notifications.length === 0 ? (
               <div className="px-6 py-12 text-center">
                 <Icon name="Bell" size={40} color="var(--color-muted-foreground)" className="mx-auto mb-4 opacity-20" />
-                <p className="text-muted-foreground caption">Mister, your tray is empty.</p>
+                <p className="text-muted-foreground caption">Your notification tray is empty.</p>
               </div>
             ) : (
               <ul>

@@ -8,7 +8,7 @@ class SupportMessage(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    # ## Mister, this allows us to group messages by topic
+    # ## this allows us to group messages by topic
     subject = Column(String, nullable=False) 
     message = Column(Text, nullable=False)
     is_from_admin = Column(Boolean, default=False)

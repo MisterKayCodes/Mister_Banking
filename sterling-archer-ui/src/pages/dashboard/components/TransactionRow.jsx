@@ -5,10 +5,10 @@ const TransactionRow = ({ transaction, currentUserAccountNos = [] }) => {
   const currency = transaction?.currency || 'USD';
   const txDate = transaction?.created_at;
 
-  // Mister, this is the CRITICAL check:
+  // This is the critical check:
   // Is the sender of this transaction one of YOUR account numbers?
   const isOutgoing = currentUserAccountNos.includes(String(transaction?.sender_no));
-  
+
   // Logic-driven styles
   const amountColor = isOutgoing ? 'text-error' : 'text-success';
   const iconColor = isOutgoing ? 'var(--color-error)' : 'var(--color-success)';
@@ -59,11 +59,11 @@ const TransactionRow = ({ transaction, currentUserAccountNos = [] }) => {
           {txDate ? new Date(txDate).toLocaleDateString() : 'N/A'}
         </p>
         <p className="text-xs text-muted-foreground caption">
-          {txDate ? new Date(txDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
+          {txDate ? new Date(txDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
         </p>
       </td>
       <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right">
-        {/* Mister, the Red/Green paint is applied here! */}
+        {/* Color logic applied based on transaction direction */}
         <p className={`text-sm font-bold ${amountColor}`}>
           {prefix}{formatCurrency(rawAmount, currency)}
         </p>

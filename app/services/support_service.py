@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from app.models.support import SupportMessage
 
 def send_support_message(db: Session, user_id: int, subject: str, message: str, is_admin: bool = False):
-    # ## Mister, this handles both user inquiries and admin replies
+    # This handles both user inquiries and admin replies
     new_msg = SupportMessage(
         user_id=user_id,
         subject=subject,
@@ -15,9 +15,9 @@ def send_support_message(db: Session, user_id: int, subject: str, message: str, 
     return new_msg
 
 def get_user_support_history(db: Session, user_id: int):
-    # ## This pulls the full chat for the citizen
+    # This pulls the full chat history for the user
     return db.query(SupportMessage).filter(SupportMessage.user_id == user_id).order_by(SupportMessage.created_at.asc()).all()
 
 def get_all_admin_messages(db: Session):
-    # ## The Admin's View of all incoming cries for help
+    # Admin view of all incoming support requests
     return db.query(SupportMessage).filter(SupportMessage.is_from_admin == False).order_by(SupportMessage.created_at.desc()).all()

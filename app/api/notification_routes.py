@@ -5,7 +5,7 @@ from app.data.database import SessionLocal
 from app.models.notification import Notification
 from app.api.auth_routes import get_current_user
 from app.models.user import User
-from app.schemas.notification import NotificationRead  # ## Mister, our new contract!
+from app.schemas.notification import NotificationRead  # ## our new contract!
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
@@ -21,8 +21,8 @@ def get_my_notifications(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """Fetch all alerts for the logged-in citizen, newest first."""
-    # ## Mister, because of 'from_attributes = True' in the schema, 
+    """Fetch all alerts for the logged-in user, newest first."""
+    # ## because of 'from_attributes = True' in the schema, 
     # ## we can return the SQLAlchemy objects directly!
     notifications = db.query(Notification).filter(
         Notification.user_id == current_user.id
@@ -37,7 +37,7 @@ def mark_as_read(
     current_user: User = Depends(get_current_user)
 ):
     """Mark a specific notification as read so it stops blinking in React."""
-    # ## Mister, we strictly filter by user_id to prevent "Peeking" or unauthorized edits.
+    # ## we strictly filter by user_id to prevent "Peeking" or unauthorized edits.
     notif = db.query(Notification).filter(
         Notification.id == notification_id, 
         Notification.user_id == current_user.id
@@ -48,14 +48,14 @@ def mark_as_read(
         
     notif.is_read = True
     db.commit()
-    return {"status": "success", "message": "Notification read, Mister."}
+    return {"status": "success", "message": "Notification read."}
 
 @router.delete("/clear-all")
 def clear_notifications(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """Mister, sometimes a citizen wants a fresh start. This wipes their tray."""
+    """sometimes a user wants a fresh start. This wipes their tray."""
     db.query(Notification).filter(Notification.user_id == current_user.id).delete()
     db.commit()
     return {"status": "success", "message": "All notifications cleared."}

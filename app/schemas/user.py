@@ -1,7 +1,7 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from datetime import datetime
 from typing import Optional, List
-# Mister, we must import these so UserResponse knows what they look like!
+# we must import these so UserResponse knows what they look like!
 from app.schemas.account import AccountResponse
 from app.schemas.wallet import WalletResponse
 
@@ -9,6 +9,7 @@ from app.schemas.wallet import WalletResponse
 class UserCreate(BaseModel):
     full_name: str
     email: EmailStr
+    date_of_birth: str
     password: str
 
 # ## For when we need to tweak the settings on an existing account.
@@ -22,17 +23,20 @@ class UserResponse(BaseModel):
     id: int
     full_name: str
     email: str
+    date_of_birth: Optional[str] = None
     is_admin: bool
     is_active: bool
     kyc_status: str = "unverified"
     
+    # ## NEW: Trading Oversight Visibility
+    trading_blocked: Optional[bool] = False
+    trading_block_reason: Optional[str] = None
+    
     # ## THE DUAL-VAULT LINK
-    # Mister, this lets the frontend see the whole empire in one request.
+    # this lets the frontend see the whole empire in one request.
     wallet: Optional[WalletResponse] = None
     accounts: List[AccountResponse] = []
     
     created_at: Optional[datetime] = None
 
-    class Config:
-        # ## Telling Pydantic to read our SQLAlchemy models like a pro.
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

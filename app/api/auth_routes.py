@@ -12,8 +12,7 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/register", response_model=UserResponse)
 def register(data: RegisterRequest, db: Session = Depends(get_db)):
-    """Register a new user account."""
-    return register_user(db, data.full_name, data.email, data.password)
+    return register_user(db, data.full_name, data.email, data.date_of_birth, data.password)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -33,13 +32,13 @@ def create_or_reset_pin(data: PinRequest, db: Session = Depends(get_db),
 @router.post("/verify-pin")
 def check_pin(data: PinRequest, db: Session = Depends(get_db),
               current_user=Depends(get_current_user)):
-    # ## Mister's Security Check: Let's see if they actually know the secret.
+    # ## System's Security Check: Let's see if they actually know the secret.
     if not verify_pin(db, current_user.id, data.pin):
         # ## Instead of a polite "false", we slam the door. 
         # ## This triggers a '401' in the terminal so you can see the failure clearly.
         raise HTTPException(
             status_code=401, 
-            detail="Invalid PIN. Security alert triggered, Mister."
+            detail="Invalid PIN. Security alert triggered."
         )
     
     # ## If they get it right, we let them through.

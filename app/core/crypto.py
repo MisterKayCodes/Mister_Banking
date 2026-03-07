@@ -1,4 +1,4 @@
-# #COPY: Mister's Crypto Engine
+# #COPY: System's Crypto Engine
 import secrets
 import string
 import requests
@@ -6,7 +6,7 @@ from decimal import Decimal
 from fastapi import HTTPException
 
 def generate_realistic_address(coin: str) -> str:
-    """Mister, this creates professional-looking blockchain addresses."""
+    """this creates professional-looking blockchain addresses."""
     chars = string.ascii_lowercase + string.digits
     suffix = ''.join(secrets.choice(chars) for _ in range(32))
 
@@ -14,7 +14,7 @@ def generate_realistic_address(coin: str) -> str:
         return f"bc1q{suffix}" # SegWit style
     elif coin.upper() == "USDT":
         return f"0x{secrets.token_hex(20)}" # ERC-20 style
-    return f"mister_{suffix}"
+    return f"administrator_{suffix}"
 
 def get_live_btc_price():
     """Fetches real-time price of BTC from the market."""
@@ -23,12 +23,12 @@ def get_live_btc_price():
         response = requests.get(url, timeout=5)
         return Decimal(str(response.json()["bitcoin"]["usd"]))
     except:
-        raise HTTPException(status_code=503, detail="Mister, the market oracle is down.")
+        raise HTTPException(status_code=503, detail="the market oracle is down.")
 
 
 # Add this to your app/core/crypto.py
 def validate_external_address(address: str, coin: str) -> bool:
-    """Mister, we verify the target looks like a real vault."""
+    """we verify the target looks like a real vault."""
     coin = coin.upper()
     if coin == "BTC":
         # Our generator: bc1q + 32 chars. 

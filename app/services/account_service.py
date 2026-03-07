@@ -7,7 +7,7 @@ from decimal import Decimal
 
 def create_account(db: Session, user_id: int, currency: str = "USDT"):
     """Create a new account for a user."""
-    # ## Mister, notice we don't pass account_number here.
+    # ## notice we don't pass account_number here.
     # ## Our Model's 'default=generate_account_number' handles the magic!
     account = Account(user_id=user_id, currency=currency)
     db.add(account)

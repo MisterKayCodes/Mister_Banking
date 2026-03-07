@@ -2,8 +2,8 @@ import React from 'react';
 import Icon from '../../../components/AppIcon';
 
 const AccountSummary = ({ accounts = [], wallet = null }) => {
-  // Mister, we use the same oracle price from the dashboard/backend here
-  const btcPrice = 64500; 
+  // Oracle price from the dashboard/backend here
+  const btcPrice = 64500;
 
   const formatCurrency = (amount, currency = 'USD') => {
     const numericAmount = parseFloat(amount || 0);
@@ -20,15 +20,15 @@ const AccountSummary = ({ accounts = [], wallet = null }) => {
     const val = parseFloat(acc?.balance || 0);
     return sum + (isNaN(val) ? 0 : val);
   }, 0);
-  
+
   // 2. Calculate Digital Assets (BTC converted to USD + USDT)
   const btcValuation = parseFloat(wallet?.btc_balance || 0) * btcPrice;
   const usdtValuation = parseFloat(wallet?.usdt_balance || 0);
   const totalDigitalAssets = (isNaN(btcValuation) ? 0 : btcValuation) + (isNaN(usdtValuation) ? 0 : usdtValuation);
-  
+
   // 3. The Grand Total
   const totalNetWorth = fiatBalance + totalDigitalAssets;
-  
+
   const activeAccounts = (accounts?.length || 0) + (wallet ? 1 : 0);
 
   const metrics = [

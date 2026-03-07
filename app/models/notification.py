@@ -14,5 +14,5 @@ class Notification(Base):
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # ## Mister, this mirrors the relationship we just put in User.py
+    # ## this mirrors the relationship we just put in User.py
     user = relationship("User", back_populates="notifications")

@@ -1,16 +1,17 @@
-"""Mister Banking API - Main application entry point."""
+"""System Banking API - Main application entry point."""
 import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
 from app.data.database import Base, engine, SessionLocal
-# Mister, we only import the seeding functions here to keep the top-level clean.
+# we only import the seeding functions here to keep the top-level clean.
 from app.services.config_service import seed_defaults, seed_test_users
 
 # ## -------------------- MODEL REGISTRATION --------------------
-# Mister, IMPORTANT: We must import these here so SQLAlchemy 
+# IMPORTANT: We must import these here so SQLAlchemy 
 # maps all relationships (User <-> Notification) correctly on startup!
 from app.models.user import User
 from app.models.notification import Notification
@@ -25,12 +26,12 @@ from app.api.user_routes import router as user_router
 from app.api.account_routes import router as account_router
 from app.api.transaction_routes import router as transaction_router
 from app.api.admin_routes import router as admin_router
-# Mister, don't forget to add your new notification router here!
+# don't forget to add your new notification router here!
 from app.api.notification_routes import router as notification_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ## Mister, this builds the tables if they are missing.
+    # ## this builds the tables if they are missing.
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
@@ -42,7 +43,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="Mister Banking API",
+    title="System Banking API",
     description="A dynamic, configurable banking system with god-mode admin panel.",
     version="1.0.0",
     lifespan=lifespan,
@@ -63,7 +64,7 @@ async def maintenance_guard(request: Request, call_next):
         if maintenance_mode and maintenance_mode.value.lower() == "true":
             return JSONResponse(
                 status_code=503,
-                content={"detail": "System is under maintenance. Please try again later, Mister."}
+                content={"detail": "System is under maintenance. Please try again later."}
             )
     except Exception:
         pass
@@ -87,9 +88,13 @@ app.include_router(transaction_router)
 app.include_router(admin_router)
 app.include_router(notification_router) # Registered for the React frontend!
 
+# ## THE VAULT STORAGE
+# this is where we serve the physical evidence (Photos/Videos).
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 @app.get("/", tags=["Health"])
 def root():
-    return {"service": "Mister Banking API", "status": "running"}
+    return {"service": "System Banking API", "status": "running"}
 
 # ## -------------------- FRONTEND SERVING --------------------
 static_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")

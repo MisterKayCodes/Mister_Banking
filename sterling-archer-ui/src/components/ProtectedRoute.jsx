@@ -2,11 +2,11 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 
 const ProtectedRoute = ({ children }) => {
-  // Mister, we check if the citizen has their badge
-  const token = localStorage.getItem('mister_token');
+  // Check if the user is authenticated
+  const token = localStorage.getItem('sa_auth_token');
 
   if (!token) {
-    // No badge? Direct escort to the login page.
+    // Redirect to login if no token is found
     return <Navigate to="/login" replace />;
   }
 

@@ -1,14 +1,14 @@
 import axios from 'axios';
 
 const api = axios.create({
-  // Mister, ensure your .env has VITE_API_URL
-  baseURL: import.meta.env.VITE_API_URL || 'http://172.20.10.5:8000',
+  // Ensure your .env has VITE_API_URL
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
 });
 
 // ## -------------------- THE OUTGOING GUARD --------------------
-// Mister, this attaches the 'mister_token' to every single request.
+// This attaches the 'sa_auth_token' to every single request.
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('mister_token'); 
+  const token = localStorage.getItem('sa_auth_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -18,13 +18,13 @@ api.interceptors.request.use((config) => {
 });
 
 // ## -------------------- THE INCOMING SENTRY --------------------
-// Mister, if the backend says '401 Unauthorized', we clear the vault and redirect.
+// If the backend says '401 Unauthorized', we clear the storage and redirect.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('mister_token');
-      // Mister, 'if the badge is fake, we escort them out.'
+      localStorage.removeItem('sa_auth_token');
+      // If the credentials are invalid, redirect to login.
       window.location.href = '/login';
     }
     return Promise.reject(error);

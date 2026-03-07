@@ -7,9 +7,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.data.database import get_db
 
-# ## Mister's Vault Secrets - If the environment variable isn't set, we use a fallback.
+# ## System's Vault Secrets - If the environment variable isn't set, we use a fallback.
 # ## But in production, we change this immediately.
-SECRET_KEY = os.environ.get("SESSION_SECRET", "super-secret-mister-key-12345")
+SECRET_KEY = os.environ.get("SESSION_SECRET", "super-secret-administrator-key-12345")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
@@ -17,7 +17,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security_scheme = HTTPBearer()
 
 def hash_password(password: str) -> str:
-    # ## No plain text touches the database on my watch, Mister.
+    # ## No plain text touches the database on my watch.
     return pwd_context.hash(password)
 
 def verify_password(plain: str, hashed: str) -> bool:
@@ -45,7 +45,7 @@ def get_current_user(
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Badge payload is corrupted.")
         user_id = int(user_id_str)
     except (JWTError, Exception):
-        # ## If the token is fake or old, the vault stays shut, Mister.
+        # ## If the token is fake or old, the vault stays shut.
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired session.")
     
     user = db.query(User).filter(User.id == user_id).first()
@@ -53,7 +53,7 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="User not recognized in the ledger.")
     
     if not user.is_active:
-        raise HTTPException(status_code=403, detail="Your account is on ice, Mister. Contact administration.")
+        raise HTTPException(status_code=403, detail="Your account is on ice. Contact administration.")
         
     return user
 
@@ -61,5 +61,5 @@ def get_admin_user(current_user=Depends(get_current_user)):
     # ## God-mode Verification.
     if not current_user.is_admin:
         # ## Nice try, but you're not the Founder. Access denied.
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Founder-level clearance required, Mister.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Founder-level clearance required.")
     return current_user

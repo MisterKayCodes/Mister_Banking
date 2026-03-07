@@ -2,7 +2,7 @@ from pydantic import BaseSettings
 
 
 class Settings(BaseSettings):
-    app_name: str = "Mister Banking API"
+    app_name: str = "System Banking API"
     database_url: str = "sqlite:///./misterbanking.db"
     settlement_delay_minutes: int = 5
 

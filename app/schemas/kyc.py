@@ -10,7 +10,7 @@ class KYCRequirementBase(BaseModel):
     is_required: bool = True
 
 class KYCRequirementCreate(KYCRequirementBase):
-    """Mister, use this to define a new document type."""
+    """use this to define a new document type."""
     pass
 
 class KYCRequirementResponse(KYCRequirementBase):
@@ -18,18 +18,18 @@ class KYCRequirementResponse(KYCRequirementBase):
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
-# -------------------- SUBMISSION SCHEMAS (Citizen's Proof) --------------------
+# -------------------- SUBMISSION SCHEMAS (User's Proof) --------------------
 
 class KYCSubmissionBase(BaseModel):
     requirement_id: int
     document_url: str
 
 class KYCSubmissionCreate(KYCSubmissionBase):
-    """Mister, this is what the citizen sends when they upload a file."""
+    """this is what the user sends when they upload a file."""
     pass
 
 class KYCSubmissionUpdate(BaseModel):
-    """Mister, use this to approve or reject a specific document."""
+    """use this to approve or reject a specific document."""
     status: str  # 'approved' or 'rejected'
     admin_comment: Optional[str] = None
 
@@ -50,7 +50,7 @@ class KYCSubmissionResponse(KYCSubmissionBase):
 
 class UserKYCStatus(BaseModel):
     """
-    Mister, this provides a bird's-eye view of a citizen's entire folder.
+    this provides a bird's-eye view of a user's entire folder.
     """
     user_id: int
     full_name: str

@@ -16,13 +16,13 @@ class Transaction(Base):
     sender_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
     receiver_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True) 
     
-    # ## Precision Money (Matches your Satoshi requirements, Mister)
+    # ## Precision Money (Matches your Satoshi requirements, Administrator)
     amount = Column(Numeric(20, 8), nullable=False)
     fee = Column(Numeric(20, 8), default=0.0)
     currency = Column(String, nullable=False, default="USD")
     
     # ## NEW: The Ledger Notes
-    # ## Mister, this prevents your long crypto receipts from being cut off.
+    # ## this prevents your long crypto receipts from being cut off.
     details = Column(Text, nullable=True) 
 
     # ## External/Overseas Details
