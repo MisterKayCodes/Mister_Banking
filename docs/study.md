@@ -84,3 +84,17 @@ I added an `onClick={onClose}` event listener directly to the fixed fullscreen b
 
 #### 3. PRODUCTION (The Ultimate Dev Solution)
 Because the inner white modal box sits *inside* the darkened backdrop, clicking the white box would also trigger the close event. To prevent this, I attached an `onClick={(e) => e.stopPropagation()}` event listener exclusively to the inner modal wrapper window. This creates the perfect standard UX: clicking the dark void closes the window, clicking the bright modal contents does nothing, letting users safely switch tabs or copy text without accidentally closing it.
+
+## Date: 2026-03-08
+**Git Commit Message:** `Fix: scale down CryptoReceiveModal to prevent off-screen clipping EFP`
+
+### CryptoReceiveModal Overflow Layout Fix (EFP)
+
+#### 1. EXPLAIN (What caused the confusion/bug)
+The "Inbound Digital Assets" (Crypto Receive) modal had strictly large padding (p-8), oversized components (like a 48x48 layout unit QR box), and a rigid height. On many mobile devices or smaller desktop browser windows, this caused the modal to expand beyond the 100vh height of the viewport. This pushed the "Close" buttons completely off the screen where the user couldn't reach them.
+
+#### 2. FIX (The Immediate Action)
+I scaled down all spacing elements inside the modal. Padding was reduced to p-5, the QR code box was shrunk to 32x32 layout units, the text sizes were pulled back mildly, and internal spacing (space-y-6) was replaced with space-y-4 or space-y-3.
+
+#### 3. PRODUCTION (The Ultimate Dev Solution)
+To absolutely guarantee the modal can never overflow off the screen again regardless of how small the device is, I added max-h-[90vh] and overflow-y-auto to the main modal container. This explicitly dictates the modal can never exceed 90% of the screen height, and if the contents *still* don't fit, the modal itself becomes internally scrollable, allowing the user to easily reach the bottom buttons.
