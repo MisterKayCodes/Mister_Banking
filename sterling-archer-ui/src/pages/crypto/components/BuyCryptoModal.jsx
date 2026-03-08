@@ -17,7 +17,7 @@ const BuyCryptoModal = ({ isOpen, onClose, onExchange, isSubmitting, accountBala
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/90 backdrop-blur-md animate-in fade-in duration-200">
-      <form 
+      <form
         onSubmit={handleSubmit}
         className="bg-card border border-border w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
       >
@@ -39,11 +39,10 @@ const BuyCryptoModal = ({ isOpen, onClose, onExchange, isSubmitting, accountBala
               <button
                 key={symbol}
                 type="button"
-                className={`flex-1 py-3 text-xs font-bold uppercase rounded-xl transition-all ${
-                  formData.crypto_symbol === symbol 
-                    ? 'bg-card text-foreground shadow-md scale-[1.02]' 
+                className={`flex-1 py-3 text-xs font-bold uppercase rounded-xl transition-all ${formData.crypto_symbol === symbol
+                    ? 'bg-card text-foreground shadow-md scale-[1.02]'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
                 onClick={() => setFormData({ ...formData, crypto_symbol: symbol })}
               >
                 {symbol === 'BTC' ? 'Bitcoin' : 'Tether'}
@@ -84,11 +83,11 @@ const BuyCryptoModal = ({ isOpen, onClose, onExchange, isSubmitting, accountBala
             <input
               type="password"
               required
-              maxLength={6}
-              className="w-full bg-accent/5 border border-accent/20 rounded-2xl p-5 text-center tracking-[1em] text-2xl focus:bg-accent/10 transition-all"
-              placeholder="••••••"
+              maxLength={4}
+              className="w-full bg-accent/5 border border-accent/20 rounded-2xl p-5 text-center tracking-[1em] text-2xl focus:bg-accent/10 transition-all font-mono"
+              placeholder="••••"
               value={formData.pin}
-              onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '') })}
             />
           </div>
 

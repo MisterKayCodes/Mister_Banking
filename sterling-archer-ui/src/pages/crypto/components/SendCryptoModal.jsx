@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import { formatCrypto } from '../../../utils/formatters';
+import { Html5Qrcode } from 'html5-qrcode';
 
 const SendCryptoModal = ({ isOpen, onClose, onSend, isSubmitting, cryptoBalances }) => {
     const [formData, setFormData] = useState({
@@ -9,6 +10,33 @@ const SendCryptoModal = ({ isOpen, onClose, onSend, isSubmitting, cryptoBalances
         to_address: '',
         pin: ''
     });
+    const [scannerActive, setScannerActive] = useState(false);
+    const [qrCodeInstance, setQrCodeInstance] = useState(null);
+
+    // QR scanner effect
+    useEffect(() => {
+        if (scannerActive) {
+            const html5QrCode = new Html5Qrcode('qr-reader');
+            html5QrCode.start({ facingMode: 'environment' }, { fps: 10, qrbox: 250 },
+                (decodedText) => {
+                    setFormData(prev => ({ ...prev, to_address: decodedText }));
+                    html5QrCode.stop().then(() => setScannerActive(false)).catch(() => { });
+                },
+                (errorMessage) => {
+                    // ignore scan errors
+                }
+            ).catch(err => {
+                console.error('Unable to start QR scanner', err);
+                setScannerActive(false);
+            });
+            setQrCodeInstance(html5QrCode);
+        }
+        return () => {
+            if (qrCodeInstance) {
+                qrCodeInstance.stop().catch(() => { });
+            }
+        };
+    }, [scannerActive]);
 
     if (!isOpen) return null;
 
@@ -59,14 +87,19 @@ const SendCryptoModal = ({ isOpen, onClose, onSend, isSubmitting, cryptoBalances
                         <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest ml-2">
                             Recipient Address
                         </label>
-                        <input
-                            type="text"
-                            required
-                            className="w-full bg-muted border-none rounded-2xl p-5 font-mono text-sm focus:ring-2 focus:ring-accent/20 transition-all"
-                            placeholder={formData.crypto_symbol === 'BTC' ? "bc1q..." : "0x..."}
-                            value={formData.to_address}
-                            onChange={(e) => setFormData({ ...formData, to_address: e.target.value })}
-                        />
+                        <div className="flex space-x-2">
+                            <input
+                                type="text"
+                                required
+                                className="flex-1 bg-muted border-none rounded-2xl p-5 font-mono text-sm focus:ring-2 focus:ring-accent/20 transition-all"
+                                placeholder={formData.crypto_symbol === 'BTC' ? "bc1q..." : "0x..."}
+                                value={formData.to_address}
+                                onChange={(e) => setFormData({ ...formData, to_address: e.target.value })}
+                            />
+                            <button type="button" onClick={() => setScannerActive(true)} className="px-3 bg-accent text-white rounded-xl hover:opacity-80 transition">
+                                Scan QR
+                            </button>
+                        </div>
                     </div>
 
                     {/* Amount Input */}
@@ -102,11 +135,11 @@ const SendCryptoModal = ({ isOpen, onClose, onSend, isSubmitting, cryptoBalances
                         <input
                             type="password"
                             required
-                            maxLength={6}
-                            className="w-full bg-accent/5 border border-accent/20 rounded-2xl p-5 text-center tracking-[1em] text-2xl focus:bg-accent/10 transition-all"
-                            placeholder="••••••"
+                            maxLength={4}
+                            className="w-full bg-accent/5 border border-accent/20 rounded-2xl p-5 text-center tracking-[1em] text-2xl focus:bg-accent/10 transition-all font-mono"
+                            placeholder="••••"
                             value={formData.pin}
-                            onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+                            onChange={(e) => setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '') })}
                         />
                     </div>
 
@@ -119,6 +152,19 @@ const SendCryptoModal = ({ isOpen, onClose, onSend, isSubmitting, cryptoBalances
                     </button>
                 </div>
             </form>
+            {scannerActive && (
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+                    <div className="bg-white p-4 rounded-lg">
+                        <div id="qr-reader" style={{ width: '300px' }}></div>
+                        <button onClick={() => {
+                            if (qrCodeInstance) {
+                                qrCodeInstance.stop().catch(() => { });
+                            }
+                            setScannerActive(false);
+                        }} className="mt-2 px-4 py-2 bg-red-500 text-white rounded">Close</button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

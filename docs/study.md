@@ -1,6 +1,25 @@
 # Study Journal: Refactoring & fixes
 
 ## Date: 2026-03-08
+**Git Commit Message:** `Feat: add QR code generation and scanning to crypto modals EFP`
+
+### Crypto QR Code Flow (EFP)
+
+#### 1. EXPLAIN (What caused the confusion/bug)
+Currently, crypto addresses are 26-42 character alphanumeric strings (e.g., `bc1q...` or `0x...`). Forcing users to manually type or copy/paste these strings is highly error-prone and leads to permanent loss of funds if a single character is wrong. QR codes eliminate this human-error vector entirely by translating the string into a machine-readable optical format.
+
+#### 2. FIX (The Immediate Action)
+I needed to add the capability to render QR codes and read them. I added two lightweight, production-grade NPM packages in the `sterling-archer-ui` directory: `qrcode.react` to generate the QR Code on the receiver's screen, and `html5-qrcode` to access the device's camera and scan QR codes on the sender's screen.
+
+#### 3. PRODUCTION (The Ultimate Dev Solution)
+I implemented this feature across two modals:
+**A. The CryptoReceiveModal.jsx (The Generator)**
+Instead of just showing the `btc_address` or `usdt_address` as text, we inject a beautifully styled `<QRCodeSVG />` component in the center of the modal. When the user switches between BTC and USDT, the QR code instantly regenerates to reflect the correct address.
+
+**B. The SendCryptoModal.jsx (The Scanner)**
+We added a `Scan QR` button inside the "Recipient Address" input field. When clicked, it opens a camera viewport overlay using `html5-qrcode`. Once the camera detects a valid QR code, it automatically closes the camera, extracts the crypto address string, and instantly populates the input field with zero typos.
+
+## Date: 2026-03-08
 **Git Commit Message:** `Feat: add real-time recipient name resolution EFP to internal transfers`
 
 ### Account Number Generation & Recipient Resolution (EFP)

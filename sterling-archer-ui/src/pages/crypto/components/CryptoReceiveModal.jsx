@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
+import { QRCodeSVG } from 'qrcode.react';
 
 const CryptoReceiveModal = ({ isOpen, onClose, account, fullName }) => {
+  const [activeTab, setActiveTab] = useState('BTC');
+
   if (!isOpen || !account) return null;
 
   const copyToClipboard = (text) => {
@@ -30,40 +33,67 @@ const CryptoReceiveModal = ({ isOpen, onClose, account, fullName }) => {
             <h2 className="text-xl font-heading font-bold">{fullName || 'Verified Citizen'}</h2>
           </div>
 
-          <div className="space-y-4">
-            {/* BTC Address Field */}
-            <div className="bg-muted/50 p-4 rounded-2xl border border-border group relative">
-              <p className="text-[10px] font-bold uppercase text-[#F7931A] mb-1 font-black">Bitcoin Address (BTC)</p>
-              <div className="flex justify-between items-center gap-4">
-                <span className="font-mono text-[13px] font-bold tracking-tight text-foreground break-all leading-tight">
-                  {account?.btc_address || 'Address Not Generated'}
-                </span>
-                <button 
-                  onClick={() => copyToClipboard(account?.btc_address)}
-                  className="p-2.5 bg-card hover:bg-[#F7931A]/10 rounded-xl text-[#F7931A] transition-colors border border-border shrink-0 shadow-sm"
-                  title="Copy BTC Address"
-                >
-                  <Icon name="Copy" size={16} />
-                </button>
-              </div>
-            </div>
+          <div className="flex bg-muted p-1 rounded-2xl w-full max-w-[250px] mx-auto">
+            {['BTC', 'USDT'].map((symbol) => (
+              <button
+                key={symbol}
+                type="button"
+                className={`flex-1 py-2 text-xs font-bold uppercase rounded-xl transition-all ${activeTab === symbol
+                  ? 'bg-card text-foreground shadow-md scale-[1.02]'
+                  : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                onClick={() => setActiveTab(symbol)}
+              >
+                {symbol}
+              </button>
+            ))}
+          </div>
 
-            {/* USDT Address Field */}
-            <div className="bg-muted/50 p-4 rounded-2xl border border-border group relative">
-              <p className="text-[10px] font-bold uppercase text-[#26A17B] mb-1 font-black">Tether Address (USDT)</p>
-              <div className="flex justify-between items-center gap-4">
-                <span className="font-mono text-[13px] font-bold tracking-tight text-foreground break-all leading-tight">
-                  {account?.usdt_address || 'Address Not Generated'}
-                </span>
-                <button 
-                  onClick={() => copyToClipboard(account?.usdt_address)}
-                  className="p-2.5 bg-card hover:bg-[#26A17B]/10 rounded-xl text-[#26A17B] transition-colors border border-border shrink-0 shadow-sm"
-                  title="Copy USDT Address"
-                >
-                  <Icon name="Copy" size={16} />
-                </button>
+          <div className="flex justify-center py-4 bg-white rounded-3xl w-48 h-48 mx-auto shadow-inner border border-border/50">
+            <QRCodeSVG
+              value={activeTab === 'BTC' ? account?.btc_address || '' : account?.usdt_address || ''}
+              size={160}
+              level="M"
+              includeMargin={false}
+              fgColor="#000000"
+              bgColor="#FFFFFF"
+            />
+          </div>
+
+          <div className="space-y-4">
+            {activeTab === 'BTC' ? (
+              <div className="bg-muted/50 p-4 rounded-2xl border border-border group relative">
+                <p className="text-[10px] font-bold uppercase text-[#F7931A] mb-1 font-black">Bitcoin Address (BTC)</p>
+                <div className="flex justify-between items-center gap-4">
+                  <span className="font-mono text-[13px] font-bold tracking-tight text-foreground break-all leading-tight">
+                    {account?.btc_address || 'Address Not Generated'}
+                  </span>
+                  <button
+                    onClick={() => copyToClipboard(account?.btc_address)}
+                    className="p-2.5 bg-card hover:bg-[#F7931A]/10 rounded-xl text-[#F7931A] transition-colors border border-border shrink-0 shadow-sm"
+                    title="Copy BTC Address"
+                  >
+                    <Icon name="Copy" size={16} />
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-muted/50 p-4 rounded-2xl border border-border group relative">
+                <p className="text-[10px] font-bold uppercase text-[#26A17B] mb-1 font-black">Tether Address (USDT)</p>
+                <div className="flex justify-between items-center gap-4">
+                  <span className="font-mono text-[13px] font-bold tracking-tight text-foreground break-all leading-tight">
+                    {account?.usdt_address || 'Address Not Generated'}
+                  </span>
+                  <button
+                    onClick={() => copyToClipboard(account?.usdt_address)}
+                    className="p-2.5 bg-card hover:bg-[#26A17B]/10 rounded-xl text-[#26A17B] transition-colors border border-border shrink-0 shadow-sm"
+                    title="Copy USDT Address"
+                  >
+                    <Icon name="Copy" size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Network Note */}
             <div className="bg-muted/50 p-4 rounded-2xl border border-border">
@@ -79,7 +109,7 @@ const CryptoReceiveModal = ({ isOpen, onClose, account, fullName }) => {
             </p>
           </div>
 
-          <button 
+          <button
             onClick={onClose}
             className="w-full py-5 border border-border text-foreground rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-foreground hover:text-background transition-all active:scale-[0.98]"
           >
@@ -87,7 +117,7 @@ const CryptoReceiveModal = ({ isOpen, onClose, account, fullName }) => {
           </button>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

@@ -86,11 +86,11 @@ const SellCryptoModal = ({ isOpen, onClose, onExchange, isSubmitting, cryptoBala
                         <input
                             type="password"
                             required
-                            maxLength={6}
-                            className="w-full bg-accent/5 border border-accent/20 rounded-2xl p-5 text-center tracking-[1em] text-2xl focus:bg-accent/10 transition-all"
-                            placeholder="••••••"
+                            maxLength={4}
+                            className="w-full bg-accent/5 border border-accent/20 rounded-2xl p-5 text-center tracking-[1em] text-2xl focus:bg-accent/10 transition-all font-mono"
+                            placeholder="••••"
                             value={formData.pin}
-                            onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+                            onChange={(e) => setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '') })}
                         />
                     </div>
 
