@@ -85,11 +85,13 @@
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/line-clamp": "^0.1.0",
     "@tailwindcss/typography": "^0.5.16",
+    "@vitejs/plugin-basic-ssl": "^2.1.4",
     "@vitejs/plugin-react": "4.3.4",
     "autoprefixer": "10.4.2",
     "postcss": "8.4.8",
     "tailwindcss": "3.4.6",
     "vite": "5.0.0",
+    "vite-plugin-mkcert": "^1.17.10",
     "vite-tsconfig-paths": "3.6.0"
   }
 }

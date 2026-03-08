@@ -1,6 +1,20 @@
 # Study Journal: Refactoring & fixes
 
 ## Date: 2026-03-08
+**Git Commit Message:** `Fix: resolve React white screen crash on QR scanner EFP`
+
+### QR Scanner White Screen Crash (EFP)
+
+#### 1. EXPLAIN (What caused the confusion/bug)
+When users clicked the "Scan QR" button, the entire application crashed and displayed a white blank page (White Screen of Death). This happened because the `Html5Qrcode` class tried to attach to the `div#qr-reader` element *milliseconds before* React had actually painted it to the DOM. When it couldn't find the element, it threw a synchronous `Error: Element with id 'qr-reader' not found`, which was unhandled by any Error Boundary, causing React to unmount the entire application tree. Furthermore, if a user denied camera permissions, the unhandled Promise rejection also caused instability.
+
+#### 2. FIX (The Immediate Action)
+I updated `SendCryptoModal.jsx` to wrap the `Html5Qrcode` initialization logic inside a `setTimeout(..., 100)` to ensure the event loop had finished and the DOM was fully rendered before attaching the scanner. I also wrapped the entire block inside a `try...catch` statement to catch any synchronous initialization errors, and added `.catch()` blocks to the asynchronous camera `.start()` method.
+
+#### 3. PRODUCTION (The Ultimate Dev Solution)
+By moving from a primitive synchronous initialization to a heavily defensive, fault-tolerant Ref-based implementation (`useRef(null)` instead of standard state for the scanner instance), we decouple the scanner's heavy lifecycle from React's render cycles. If the camera fails or permissions are denied, it gracefully catches the error, alerts the user ("Failed to access camera"), and immediately disables the scanner overlay, allowing the user to seamlessly fall back to manual text entry without the app exploding. The memory leak is also fixed by calling `.clear()` on dismount.
+
+## Date: 2026-03-08
 **Git Commit Message:** `Feat: add QR code generation and scanning to crypto modals EFP`
 
 ### Crypto QR Code Flow (EFP)
@@ -56,3 +70,17 @@ We changed the rules. We moved the "pen" to a completely different table (a sepa
 Now, the manual (File B) doesn't need to look at the builder (File A) at all. It just works. And the builder (File A) can open the manual (File B) safely. 
 
 *Rule of thumb: Never let two files point at each other at the top of the page.*
+
+## Date: 2026-03-08
+**Git Commit Message:** `Fix: add backdrop click-to-close to CryptoReceiveModal EFP`
+
+### CryptoReceiveModal Close Behavior (EFP)
+
+#### 1. EXPLAIN (What caused the confusion/bug)
+Users viewing the 'Inbound Digital Assets' modal (the crypto QR code receiver) felt trapped. While there was a visible 'X' button and a 'Close Vault' button, clicking on the dark, empty background behind the modal did nothing. In modern web design, users expect clicking out of a modal to automatically close it.
+
+#### 2. FIX (The Immediate Action)
+I added an `onClick={onClose}` event listener directly to the fixed fullscreen backdrop that dims the background behind the modal.
+
+#### 3. PRODUCTION (The Ultimate Dev Solution)
+Because the inner white modal box sits *inside* the darkened backdrop, clicking the white box would also trigger the close event. To prevent this, I attached an `onClick={(e) => e.stopPropagation()}` event listener exclusively to the inner modal wrapper window. This creates the perfect standard UX: clicking the dark void closes the window, clicking the bright modal contents does nothing, letting users safely switch tabs or copy text without accidentally closing it.

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Icon from '../../../components/AppIcon';
 import { formatCrypto } from '../../../utils/formatters';
 import { Html5Qrcode } from 'html5-qrcode';
@@ -11,29 +11,88 @@ const SendCryptoModal = ({ isOpen, onClose, onSend, isSubmitting, cryptoBalances
         pin: ''
     });
     const [scannerActive, setScannerActive] = useState(false);
-    const [qrCodeInstance, setQrCodeInstance] = useState(null);
+    const [scannerError, setScannerError] = useState('');
+    const scannerRef = useRef(null);
 
     // QR scanner effect
     useEffect(() => {
-        if (scannerActive) {
-            const html5QrCode = new Html5Qrcode('qr-reader');
-            html5QrCode.start({ facingMode: 'environment' }, { fps: 10, qrbox: 250 },
-                (decodedText) => {
-                    setFormData(prev => ({ ...prev, to_address: decodedText }));
-                    html5QrCode.stop().then(() => setScannerActive(false)).catch(() => { });
-                },
-                (errorMessage) => {
-                    // ignore scan errors
-                }
-            ).catch(err => {
-                console.error('Unable to start QR scanner', err);
-                setScannerActive(false);
-            });
-            setQrCodeInstance(html5QrCode);
+        if (!scannerActive) {
+            setScannerError('');
+            return;
         }
+
+        let isMounted = true;
+        // Use setTimeout to skip one event loop ensuring the DOM node 'qr-reader' is physically rendered
+        const timer = setTimeout(() => {
+            if (!isMounted) return;
+            try {
+                const html5QrCode = new Html5Qrcode('qr-reader');
+                scannerRef.current = html5QrCode;
+
+                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+                const qsSuccess = (decodedText) => {
+                    if (!isMounted) return;
+                    setFormData(prev => ({ ...prev, to_address: decodedText }));
+                    html5QrCode.stop().then(() => {
+                        html5QrCode.clear();
+                        if (isMounted) setScannerActive(false);
+                    }).catch(console.error);
+                };
+
+                const qsError = (errorMessage) => {
+                    // ignore background scan errors
+                };
+
+                const startScanner = (cameraIdOrConfig) => {
+                    html5QrCode.start(cameraIdOrConfig, config, qsSuccess, qsError)
+                        .catch(err => {
+                            if (!isMounted) return;
+                            console.warn("Camera start failed:", err);
+
+                            // Check if running in a secure context (required for camera access)
+                            if (window.isSecureContext === false) {
+                                setScannerError("Camera access requires a secure connection (HTTPS) or localhost. Please check your URL.");
+                                return;
+                            }
+
+                            // Fallback if environment back camera isn't available
+                            if (cameraIdOrConfig.facingMode === 'environment') {
+                                Html5Qrcode.getCameras().then(devices => {
+                                    if (!isMounted) return;
+                                    if (devices && devices.length > 0) {
+                                        // Pick the first camera
+                                        startScanner(devices[0].id);
+                                    } else {
+                                        setScannerError("No cameras found on your device.");
+                                    }
+                                }).catch(e => {
+                                    if (isMounted) setScannerError("Please click 'Allow' on your browser's camera permission prompt to scan QR codes.");
+                                });
+                            } else {
+                                setScannerError("Camera blocked by browser. Please check site permissions in your browser address bar.");
+                            }
+                        });
+                };
+
+                startScanner({ facingMode: 'environment' });
+
+            } catch (error) {
+                console.error("QR Scanner initialization error", error);
+                if (isMounted) setScannerError("QR Scanner crashed. Please try typing the address manually.");
+            }
+        }, 150);
+
         return () => {
-            if (qrCodeInstance) {
-                qrCodeInstance.stop().catch(() => { });
+            isMounted = false;
+            clearTimeout(timer);
+            if (scannerRef.current) {
+                try {
+                    scannerRef.current.stop().then(() => {
+                        scannerRef.current.clear();
+                    }).catch(() => { });
+                } catch (e) { }
+                scannerRef.current = null;
             }
         };
     }, [scannerActive]);
@@ -153,15 +212,26 @@ const SendCryptoModal = ({ isOpen, onClose, onSend, isSubmitting, cryptoBalances
                 </div>
             </form>
             {scannerActive && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-                    <div className="bg-white p-4 rounded-lg">
-                        <div id="qr-reader" style={{ width: '300px' }}></div>
-                        <button onClick={() => {
-                            if (qrCodeInstance) {
-                                qrCodeInstance.stop().catch(() => { });
-                            }
-                            setScannerActive(false);
-                        }} className="mt-2 px-4 py-2 bg-red-500 text-white rounded">Close</button>
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white p-6 rounded-3xl w-full max-w-sm flex flex-col items-center">
+                        <div className="flex justify-between items-center w-full mb-4">
+                            <h3 className="font-black align-left uppercase">Scan QR Code</h3>
+                            <button onClick={() => setScannerActive(false)} className="text-gray-400 hover:text-red-500 transition-colors">
+                                <Icon name="X" size={24} />
+                            </button>
+                        </div>
+
+                        {scannerError ? (
+                            <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-bold text-center w-full">
+                                {scannerError}
+                            </div>
+                        ) : (
+                            <div id="qr-reader" className="w-full overflow-hidden rounded-xl bg-black min-h-[250px] flex items-center justify-center border-2 border-dashed border-gray-300"></div>
+                        )}
+
+                        <button onClick={() => setScannerActive(false)} className="mt-6 w-full py-3 bg-red-500 text-white font-bold tracking-widest uppercase rounded-xl hover:bg-red-600 transition-colors">
+                            Close Scanner
+                        </button>
                     </div>
                 </div>
             )}
