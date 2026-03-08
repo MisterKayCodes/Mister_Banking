@@ -51,6 +51,13 @@ const SidebarNavigation = ({ isCollapsed = false, userRole = 'customer' }) => {
       roles: ['customer', 'admin']
     },
     {
+      id: 'nav-settings',
+      label: 'Settings',
+      path: '/settings',
+      icon: 'Settings',
+      roles: ['customer', 'admin']
+    },
+    {
       id: 'nav-admin',
       label: 'Administration',
       path: '/admin-dashboard',
@@ -59,7 +66,7 @@ const SidebarNavigation = ({ isCollapsed = false, userRole = 'customer' }) => {
     }
   ];
 
-  const filteredNavigation = navigationItems.filter(item => 
+  const filteredNavigation = navigationItems.filter(item =>
     item.roles.includes(userRole)
   );
 
@@ -85,16 +92,15 @@ const SidebarNavigation = ({ isCollapsed = false, userRole = 'customer' }) => {
 
       {/* Mobile Overlay */}
       {isMobileOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40" 
-          onClick={closeMobileMenu} 
+        <div
+          className="lg:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+          onClick={closeMobileMenu}
         />
       )}
 
       <aside
-        className={`fixed top-0 left-0 h-full bg-card border-r border-border z-40 transition-all duration-300 ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        } ${isCollapsed ? 'w-20' : 'w-64'}`}
+        className={`fixed top-0 left-0 h-full bg-card border-r border-border z-40 transition-all duration-300 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          } ${isCollapsed ? 'w-20' : 'w-64'}`}
       >
         <div className="flex flex-col h-full">
           {/* Institution Branding */}
@@ -122,11 +128,10 @@ const SidebarNavigation = ({ isCollapsed = false, userRole = 'customer' }) => {
                   <Link
                     to={item.path}
                     onClick={closeMobileMenu}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${
-                      isActive(item.path)
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${isActive(item.path)
                         ? 'bg-accent text-accent-foreground shadow-sm'
                         : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                    }`}
+                      }`}
                   >
                     <Icon
                       name={item.icon}
@@ -146,9 +151,8 @@ const SidebarNavigation = ({ isCollapsed = false, userRole = 'customer' }) => {
           <div className="border-t border-border p-4">
             <button
               onClick={handleLogout}
-              className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-destructive hover:bg-destructive/10 transition-all ${
-                isCollapsed ? 'justify-center' : ''
-              }`}
+              className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-destructive hover:bg-destructive/10 transition-all ${isCollapsed ? 'justify-center' : ''
+                }`}
             >
               <Icon name="LogOut" size={20} />
               {!isCollapsed && (

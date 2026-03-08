@@ -1,19 +1,13 @@
 import React from 'react';
 import Icon from '../../../components/AppIcon';
+import { formatFiat } from '../../../utils/formatters';
+import { calculateCryptoValuation } from '../../../utils/calculators';
 
 const AccountSummary = ({ accounts = [], wallet = null }) => {
   // Oracle price from the dashboard/backend here
   const btcPrice = 64500;
 
-  const formatCurrency = (amount, currency = 'USD') => {
-    const numericAmount = parseFloat(amount || 0);
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(numericAmount);
-  };
+  // Using global formatters for fiat in the vault
 
   // 1. Calculate Fiat (USD Accounts)
   const fiatBalance = (accounts || []).reduce((sum, acc) => {
@@ -22,9 +16,7 @@ const AccountSummary = ({ accounts = [], wallet = null }) => {
   }, 0);
 
   // 2. Calculate Digital Assets (BTC converted to USD + USDT)
-  const btcValuation = parseFloat(wallet?.btc_balance || 0) * btcPrice;
-  const usdtValuation = parseFloat(wallet?.usdt_balance || 0);
-  const totalDigitalAssets = (isNaN(btcValuation) ? 0 : btcValuation) + (isNaN(usdtValuation) ? 0 : usdtValuation);
+  const totalDigitalAssets = calculateCryptoValuation(wallet?.btc_balance, wallet?.usdt_balance, btcPrice);
 
   // 3. The Grand Total
   const totalNetWorth = fiatBalance + totalDigitalAssets;
@@ -34,7 +26,7 @@ const AccountSummary = ({ accounts = [], wallet = null }) => {
   const metrics = [
     {
       label: 'Total Net Worth',
-      value: formatCurrency(totalNetWorth),
+      value: formatFiat(totalNetWorth),
       icon: 'ShieldCheck',
       color: 'var(--color-accent)',
       bgColor: 'bg-accent/10'
@@ -48,7 +40,7 @@ const AccountSummary = ({ accounts = [], wallet = null }) => {
     },
     {
       label: 'Digital Assets',
-      value: formatCurrency(totalDigitalAssets),
+      value: formatFiat(totalDigitalAssets),
       icon: 'Bitcoin',
       color: 'var(--color-primary)',
       bgColor: 'bg-primary/10'

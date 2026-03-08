@@ -32,6 +32,10 @@ def get_profile(db: Session = Depends(get_db), current_user=Depends(get_current_
             joinedload(User.accounts),
             joinedload(User.wallet)
         ).filter(User.id == current_user.id).first()
+        
+        # Dynamically evaluate if the user has a transaction PIN set
+        setattr(user, 'has_pin', bool(user.pin_hash))
+        
         return user
     except Exception as e:
         import traceback

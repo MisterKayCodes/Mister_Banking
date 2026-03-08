@@ -27,6 +27,8 @@ class UserResponse(BaseModel):
     is_admin: bool
     is_active: bool
     kyc_status: str = "unverified"
+    has_pin: bool = False
+    
     
     # ## NEW: Trading Oversight Visibility
     trading_blocked: Optional[bool] = False

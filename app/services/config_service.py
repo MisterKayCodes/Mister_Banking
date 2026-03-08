@@ -56,7 +56,8 @@ def seed_test_users(db: Session):
         admin = User(
             full_name="System Administrator",
             email="admin@gmail.com",
-            password_hash=hash_password("admin"), 
+            password_hash=hash_password("admin"),
+            pin_hash=hash_password("123456"),
             is_admin=True,
             is_active=True,
             kyc_status="verified"
@@ -87,6 +88,7 @@ def seed_test_users(db: Session):
             full_name="John Stones",
             email="johnstones@gmail.com",
             password_hash=hash_password("johnstones"),
+            pin_hash=hash_password("123456"),
             is_admin=False,
             is_active=True,
             kyc_status="verified"

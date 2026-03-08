@@ -1,5 +1,7 @@
 import React from 'react';
 import Icon from '../../../components/AppIcon';
+import { formatCrypto, formatFiat } from '../../../utils/formatters';
+import { calculateCryptoValuation } from '../../../utils/calculators';
 
 const CryptoHero = ({ account, loading }) => {
   if (loading) return <div className="h-64 bg-card animate-pulse rounded-[2.5rem]" />;
@@ -28,7 +30,7 @@ const CryptoHero = ({ account, loading }) => {
               <span className="text-xs font-bold uppercase">Bitcoin Holdings</span>
             </div>
             <h2 className="text-4xl font-heading font-bold tracking-tighter">
-              {account?.btc_balance || '0.00000000'} <span className="text-lg text-muted-foreground">BTC</span>
+              {formatCrypto(account?.btc_balance, 'BTC')} <span className="text-lg text-muted-foreground">BTC</span>
             </h2>
           </div>
 
@@ -39,7 +41,7 @@ const CryptoHero = ({ account, loading }) => {
               <span className="text-xs font-bold uppercase">Tether Balance</span>
             </div>
             <h2 className="text-4xl font-heading font-bold tracking-tighter">
-              {account?.usdt_balance || '0.00'} <span className="text-lg text-muted-foreground">USDT</span>
+              {formatCrypto(account?.usdt_balance, 'USDT')} <span className="text-lg text-muted-foreground">USDT</span>
             </h2>
           </div>
         </div>
@@ -47,10 +49,10 @@ const CryptoHero = ({ account, loading }) => {
         <div className="mt-8 pt-6 border-t border-border flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase text-muted-foreground">Total Valuation (USD)</p>
-            <p className="text-2xl font-bold">${account?.balance?.toLocaleString()}</p>
+            <p className="text-2xl font-bold">{formatFiat(calculateCryptoValuation(account?.btc_balance, account?.usdt_balance))}</p>
           </div>
           <div className="flex gap-2">
-             <span className="px-3 py-1 bg-success/10 text-success text-[10px] font-black uppercase rounded-full border border-success/20">Active</span>
+            <span className="px-3 py-1 bg-success/10 text-success text-[10px] font-black uppercase rounded-full border border-success/20">Active</span>
           </div>
         </div>
       </div>

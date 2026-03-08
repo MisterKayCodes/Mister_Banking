@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.data.database import get_db
 from app.core.security import get_current_user
-from app.schemas.account import AccountCreate, AccountResponse
-from app.services.account_service import create_account, get_user_accounts, get_account
+from app.schemas.account import AccountCreate, AccountResponse, AccountResolveResponse
+from app.services.account_service import create_account, get_user_accounts, get_account, resolve_account_by_number
 
 router = APIRouter(prefix="/accounts", tags=["Accounts"])
 
@@ -39,6 +39,21 @@ def list_my_accounts(db: Session = Depends(get_db),
                 acc.type = "Crypto"
             
     return accounts
+
+@router.get("/resolve/{account_number}", response_model=AccountResolveResponse)
+def resolve_account_identity(
+    account_number: str, 
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Micro-service endpoint to securely resolve an account number to an owner name.
+    Strictly returns ONLY the safe `AccountResolveResponse` schema.
+    """
+    if len(account_number) != 10 or not account_number.isdigit():
+        raise HTTPException(status_code=400, detail="Invalid account format.")
+        
+    return resolve_account_by_number(db, account_number)
 
 @router.get("/{account_id}", response_model=AccountResponse)
 def read_account(account_id: int, db: Session = Depends(get_db),

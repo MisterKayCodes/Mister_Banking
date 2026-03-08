@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class RegisterRequest(BaseModel):
@@ -19,4 +19,4 @@ class TokenResponse(BaseModel):
 
 
 class PinRequest(BaseModel):
-    pin: str
+    pin: str = Field(..., min_length=4, max_length=4, pattern="^[0-9]{4}$", description="Strictly a 4-digit numerical PIN.")

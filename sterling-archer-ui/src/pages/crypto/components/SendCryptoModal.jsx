@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
+import { formatCrypto } from '../../../utils/formatters';
 
 const SendCryptoModal = ({ isOpen, onClose, onSend, isSubmitting, cryptoBalances }) => {
     const [formData, setFormData] = useState({
@@ -75,7 +76,7 @@ const SendCryptoModal = ({ isOpen, onClose, onSend, isSubmitting, cryptoBalances
                                 Amount ({formData.crypto_symbol})
                             </label>
                             <span className="text-[10px] font-bold text-accent uppercase">
-                                Avail: {currentBalance} {formData.crypto_symbol}
+                                Avail: {formatCrypto(currentBalance, formData.crypto_symbol, true)}
                             </span>
                         </div>
                         <div className="relative">

@@ -10,6 +10,8 @@ import Account from './pages/account';
 import Crypto from './pages/crypto'; // Importing the new Digital Asset Controller
 import KYCCenter from './pages/kyc-center'; // The new Verification Hub
 import Support from './pages/support'; // Private Client Relations
+import SetupPin from './pages/setup-pin';
+import Settings from './pages/settings';
 import ProtectedRoute from 'components/ProtectedRoute';
 import AdminProtectedRoute from 'components/AdminProtectedRoute';
 import AdminLogin from './pages/admin-login';
@@ -72,6 +74,24 @@ const Routes = () => {
             element={
               <ProtectedRoute>
                 <Support />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Security & Settings */}
+          <Route
+            path="/setup-pin"
+            element={
+              <ProtectedRoute>
+                <SetupPin />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             }
           />

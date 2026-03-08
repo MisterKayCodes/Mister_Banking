@@ -29,6 +29,17 @@ def get_user_accounts(db: Session, user_id: int):
     return db.query(Account).filter(Account.user_id == user_id).all()
 
 
+def resolve_account_by_number(db: Session, account_number: str):
+    """Securely look up an account by its 10-digit number."""
+    account = db.query(Account).filter(Account.account_number == account_number).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found.")
+    
+    # We must ensure the user object is attached so we can get the owner_name
+    account.owner_name = account.user.full_name if account.user else "Unknown Entity"
+    return account
+
+
 def set_account_status(db: Session, account_id: int, is_active: bool):
     """Admin: activate or deactivate an account."""
     account = get_account(db, account_id)

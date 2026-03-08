@@ -4,6 +4,7 @@ import Icon from '../../../components/AppIcon';
 import { useToast } from 'hooks/useToast';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
+import { formatCrypto } from '../../../utils/formatters';
 
 const CryptoCommander = () => {
     const { showToast, ToastComponent } = useToast();
@@ -119,8 +120,8 @@ const CryptoCommander = () => {
                                                 <span className="text-[10px] text-muted-foreground font-mono">{w.owner_email}</span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4 font-mono text-xs font-bold">{w.btc_balance.toFixed(8)} BTC</td>
-                                        <td className="px-4 py-4 font-mono text-xs font-bold">{w.usdt_balance.toFixed(2)} USDT</td>
+                                        <td className="px-4 py-4 font-mono text-xs font-bold">{formatCrypto(w.btc_balance, 'BTC', true)}</td>
+                                        <td className="px-4 py-4 font-mono text-xs font-bold">{formatCrypto(w.usdt_balance, 'USDT', true)}</td>
                                         <td className="px-4 py-4 text-right">
                                             <button
                                                 onClick={() => handleTradeBlock(w.user_id, w.trading_blocked)}

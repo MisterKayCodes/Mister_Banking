@@ -62,10 +62,25 @@ const LoginForm = () => {
         // Store the authentication token in the browser
         localStorage.setItem('sa_auth_token', access_token);
 
-        // Success! Off to the dashboard
-        navigate('/dashboard');
+        // Fetch User Profile immediately to check security flags
+        const profileRes = await api.get('/users/me', {
+          headers: { Authorization: `Bearer ${access_token}` }
+        });
+        const userProfile = profileRes.data;
+        localStorage.setItem('user', JSON.stringify(userProfile));
+
+        // Security Check: Does the user have a PIN?
+        if (userProfile && userProfile.has_pin === false) {
+          navigate('/setup-pin');
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (error) {
+      if (!error.response) {
+        setErrors({ password: 'Connection failed. Ensure you are on the same WiFi network as the server.' });
+        return;
+      }
       // Catch the error message from the service
       const serverMessage = error.response?.data?.detail || 'Invalid email or password. Access denied.';
       setErrors({ password: serverMessage });

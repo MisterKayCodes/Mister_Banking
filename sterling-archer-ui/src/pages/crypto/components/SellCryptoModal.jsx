@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
+import { formatCrypto } from '../../../utils/formatters';
 
 const SellCryptoModal = ({ isOpen, onClose, onExchange, isSubmitting, cryptoBalances }) => {
     const [formData, setFormData] = useState({
@@ -42,8 +43,8 @@ const SellCryptoModal = ({ isOpen, onClose, onExchange, isSubmitting, cryptoBala
                                 key={symbol}
                                 type="button"
                                 className={`flex-1 py-3 text-xs font-bold uppercase rounded-xl transition-all ${formData.crypto_symbol === symbol
-                                        ? 'bg-card text-foreground shadow-md scale-[1.02]'
-                                        : 'text-muted-foreground hover:text-foreground'
+                                    ? 'bg-card text-foreground shadow-md scale-[1.02]'
+                                    : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                 onClick={() => setFormData({ ...formData, crypto_symbol: symbol })}
                             >
@@ -59,7 +60,7 @@ const SellCryptoModal = ({ isOpen, onClose, onExchange, isSubmitting, cryptoBala
                                 Amount to Sell ({formData.crypto_symbol})
                             </label>
                             <span className="text-[10px] font-bold text-accent uppercase">
-                                Avail: {currentBalance} {formData.crypto_symbol}
+                                Avail: {formatCrypto(currentBalance, formData.crypto_symbol, true)}
                             </span>
                         </div>
                         <div className="relative">

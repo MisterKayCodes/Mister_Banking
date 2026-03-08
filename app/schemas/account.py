@@ -6,6 +6,12 @@ from decimal import Decimal
 class AccountCreate(BaseModel):
     currency: str = "USDT"
 
+class AccountResolveResponse(BaseModel):
+    account_number: str
+    owner_name: str
+    
+    model_config = ConfigDict(from_attributes=True)
+
 class AccountResponse(BaseModel):
     id: int
     user_id: int
