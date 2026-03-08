@@ -38,17 +38,17 @@ const AdminDashboard = () => {
 
             <div className={`transition-smooth min-h-screen flex flex-col ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
                 {/* Institutional Header */}
-                <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b border-border px-4 md:px-8 py-4 flex justify-between items-center h-20">
-                    <div className="flex items-center gap-4">
-                        <div className="p-2.5 bg-foreground text-background rounded-xl shadow-lg">
+                <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b border-border px-4 md:px-8 py-4 flex justify-between items-center h-20 gap-4">
+                    <div className="flex items-center gap-4 shrink-0">
+                        <div className="p-2.5 bg-foreground text-background rounded-xl shadow-lg shrink-0">
                             <Icon name="Activity" size={20} />
                         </div>
-                        <div>
-                            <h1 className="text-xl font-heading font-extrabold text-foreground uppercase italic tracking-tighter">
+                        <div className="shrink-0">
+                            <h1 className="text-xl font-heading font-extrabold text-foreground uppercase italic tracking-tighter whitespace-nowrap">
                                 Foundation Terminal
                             </h1>
-                            <div className="flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                            <div className="flex items-center gap-2 whitespace-nowrap">
+                                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse shrink-0" />
                                 <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">
                                     Secure Connection Established
                                 </p>
@@ -57,7 +57,7 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Desktop Tab Selector */}
-                    <div className="hidden xl:flex items-center gap-2 p-1 bg-muted/50 rounded-2xl border border-border">
+                    <div className="hidden xl:flex items-center gap-2 p-1 bg-muted/50 rounded-2xl border border-border overflow-x-auto scrollbar-hide">
                         {tabs.map(tab => (
                             <button
                                 key={tab.id}

@@ -112,3 +112,20 @@ In index.jsx, I passed down the master status?.is_fully_verified boolean to each
 
 #### 3. PRODUCTION (The Ultimate Dev Solution)
 Inside RequirementCard.jsx, I added a master override. If isVerified is passed in as 	rue, the getStatusConfig function ignores the individual submission status and immediately forces the card into a green "Verified" UI state with a checkmark. Furthermore, I wrapped the upload buttons (<button onClick={() => setShowOptions(true)}>) in a conditional {!isVerified}, physically removing the ability for fully verified users to click the button or submit unnecessary documents to the server.
+
+## Date: 2026-03-08
+**Git Commit Message:** `Fix: reconnect dangling master-ledger API and repair Admin Dashboard header wrapping EFP`
+
+### People Management Blank Ledger & Header Overlap (EFP)
+
+#### 1. EXPLAIN (What caused the confusion/bug)
+There were two distinct bugs on the Admin Dashboard component. 
+First, the institutional header Foundation Terminal text was wrapping awkwardly across multiple lines and overlapping the tab menu. This happens because flexbox naturally shrinks child elements containing text when space gets tight.
+Second, the People Ledger table was completely empty. This was a critical backend failure. Inside pp/api/admin_routes.py, the @router.get("/users/master-ledger") decorator was entirely disconnected from its function (iew_all_users()). It was floating at the top of the file, inadvertently decorating the wrong function dmin_promote_route(). When the frontend called for the master ledger, the backend threw an error instead of returning the user list.
+
+#### 2. FIX (The Immediate Action)
+On the frontend (dmin-dashboard/index.jsx), I added shrink-0 to the header's logo icons and wrapper divs, and applied whitespace-nowrap to the main terminal text and status pulse. This forbids the browser from stacking the words regardless of horizontal compression. I also made the Desktop Tab menu scrollable horizontally.
+On the backend, I removed the dangling @router.get("/users/master-ledger") from line 38, scrolled down to line 63, and properly attached it directly above the def view_all_users() function.
+
+#### 3. PRODUCTION (The Ultimate Dev Solution)
+By locking the header text on a single line with whitespace-nowrap and shrink-0, the UI remains professional and intact across all viewport widths. By properly attaching the GET route to its dedicated function on the backend, the FastAPI framework can correctly serialize the full master list of users from the database, instantly repopulating the ledger table with all registered identities on the frontend.

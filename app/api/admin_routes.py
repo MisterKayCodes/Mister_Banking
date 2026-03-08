@@ -36,6 +36,13 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 # -------------------- MASTER VIEW --------------------
 
 @router.get("/users/master-ledger")
+def view_all_users(db: Session = Depends(get_db), admin=Depends(get_admin_user)):
+    """
+    Returns a full list of users, their statuses, and their 10-digit account numbers.
+    """
+    # ## Calling the service logic we built. 
+    # ## Only an admin with a valid token can see this list.
+    return get_all_users_master_list(db)
 
 # ---------------------------------------------------------------------
 # Promote/Demote a user to/from admin role
@@ -60,14 +67,6 @@ def admin_verify_route(user_id: int, data: AdminUserUpdate, db: Session = Depend
 def view_user_detail(user_id: int, db: Session = Depends(get_db), admin=Depends(get_admin_user)):
     """Return detailed info for a single user, including accounts and wallet."""
     return get_user_by_id(db, user_id)
-
-def view_all_users(db: Session = Depends(get_db), admin=Depends(get_admin_user)):
-    """
-    Returns a full list of users, their statuses, and their 10-digit account numbers.
-    """
-    # ## Calling the service logic we built. 
-    # ## Only an admin with a valid token can see this list.
-    return get_all_users_master_list(db)
 
 @router.patch("/users/{user_id}/edit-profile")
 def admin_edit_user(user_id: int, 
