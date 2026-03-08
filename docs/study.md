@@ -98,3 +98,17 @@ I scaled down all spacing elements inside the modal. Padding was reduced to p-5,
 
 #### 3. PRODUCTION (The Ultimate Dev Solution)
 To absolutely guarantee the modal can never overflow off the screen again regardless of how small the device is, I added max-h-[90vh] and overflow-y-auto to the main modal container. This explicitly dictates the modal can never exceed 90% of the screen height, and if the contents *still* don't fit, the modal itself becomes internally scrollable, allowing the user to easily reach the bottom buttons.
+
+## Date: 2026-03-08
+**Git Commit Message:** `Fix: disable document upload inputs for fully verified KYC users EFP`
+
+### KYC Requirement Override (EFP)
+
+#### 1. EXPLAIN (What caused the confusion/bug)
+Even though the user's overarching backend status had is_fully_verified: true (triggering the 100% Secure Citizen hero banner), the individual RequirementCard components were blindly checking their own isolated individual states (whether the user had uploaded a specific passport image). As a result, users who had bypassed individual uploads via manual admin approval were still being prompted with "Action Required" to upload files they didn't need to.
+
+#### 2. FIX (The Immediate Action)
+In index.jsx, I passed down the master status?.is_fully_verified boolean to each individual <RequirementCard /> component as a new prop.
+
+#### 3. PRODUCTION (The Ultimate Dev Solution)
+Inside RequirementCard.jsx, I added a master override. If isVerified is passed in as 	rue, the getStatusConfig function ignores the individual submission status and immediately forces the card into a green "Verified" UI state with a checkmark. Furthermore, I wrapped the upload buttons (<button onClick={() => setShowOptions(true)}>) in a conditional {!isVerified}, physically removing the ability for fully verified users to click the button or submit unnecessary documents to the server.

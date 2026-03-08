@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import Icon from '../../../components/AppIcon';
 import api from '../../../api/axios';
 
-const RequirementCard = ({ requirement, submission, onSubmit, isSubmitting }) => {
+const RequirementCard = ({ requirement, submission, isVerified, onSubmit, isSubmitting }) => {
     const fileInputRef = useRef(null);
     const [uploading, setUploading] = useState(false);
     const [showOptions, setShowOptions] = useState(false);
@@ -12,6 +12,7 @@ const RequirementCard = ({ requirement, submission, onSubmit, isSubmitting }) =>
     const status = submission?.status || 'missing';
 
     const getStatusConfig = (s) => {
+        if (isVerified) return { color: 'text-success', bg: 'bg-success/5', border: 'border-success/20', icon: 'CheckCircle', label: 'Verified' };
         switch (s) {
             case 'approved': return { color: 'text-success', bg: 'bg-success/5', border: 'border-success/20', icon: 'CheckCircle', label: 'Verified' };
             case 'pending': return { color: 'text-warning', bg: 'bg-warning/5', border: 'border-warning/20', icon: 'Clock', label: 'Under Review' };
@@ -80,7 +81,7 @@ const RequirementCard = ({ requirement, submission, onSubmit, isSubmitting }) =>
                 </p>
             </div>
 
-            {status !== 'approved' && (
+            {status !== 'approved' && !isVerified && (
                 <div className="space-y-3">
                     {!showOptions ? (
                         <button

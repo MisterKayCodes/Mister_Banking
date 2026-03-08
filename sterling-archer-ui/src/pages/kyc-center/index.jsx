@@ -115,6 +115,7 @@ const KYCCenter = () => {
                                                 key={req.id}
                                                 requirement={req}
                                                 submission={submission}
+                                                isVerified={status?.is_fully_verified}
                                                 onSubmit={(url) => handleSubmitDoc(req.id, url)}
                                                 isSubmitting={submittingId === req.id}
                                             />
