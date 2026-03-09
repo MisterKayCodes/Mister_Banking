@@ -14,12 +14,12 @@ const getBaseUrl = () => {
   if (typeof window !== 'undefined') {
     // If we are on the real domain (not localhost), just use the domain as is.
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      return ''; // Empty string means "use the current domain/prefix"
+      return '/api'; // Use /api as the prefix for all backend calls
     }
     // For local development, we still need port 5000.
-    return `${window.location.protocol}//${window.location.hostname}:5000`;
+    return `${window.location.protocol}//${window.location.hostname}:5000/api`;
   }
-  return 'http://localhost:5000';
+  return 'http://localhost:5000/api';
 };
 
 const api = axios.create({
