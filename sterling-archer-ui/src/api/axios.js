@@ -4,12 +4,19 @@ import axios from 'axios';
 // Dynamically determine the backend URL so mobile devices on the same WiFi 
 // don't try to dial their own 'localhost'.
 const getBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== 'http://localhost:5000') {
+  // 1. If we have a specific API URL in the .env, use it!
+  if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
 
-  // If no specific environment variable is set, route to the same IP serving the frontend, but port 5000.
+  // 2. In Production (VPS), we want to talk to Nginx on the SAME domain.
+  // We do NOT add :5000 because Nginx is our receptionist on the main gate (Port 80/443).
   if (typeof window !== 'undefined') {
+    // If we are on the real domain (not localhost), just use the domain as is.
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return ''; // Empty string means "use the current domain/prefix"
+    }
+    // For local development, we still need port 5000.
     return `${window.location.protocol}//${window.location.hostname}:5000`;
   }
   return 'http://localhost:5000';
