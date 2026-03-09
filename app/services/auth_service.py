@@ -109,3 +109,17 @@ def verify_pin(db: Session, user_id: int, pin: str) -> bool:
         return False
         
     return verify_password(pin, user.pin_hash)
+
+
+def change_password(db: Session, user_id: int, old_password: str, new_password: str):
+    """The security reset: Upgrading the login key."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Identity record not found.")
+
+    if not verify_password(old_password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Current password verification failed.")
+
+    user.password_hash = hash_password(new_password)
+    db.commit()
+    return {"status": "success", "message": "Password updated successfully."}

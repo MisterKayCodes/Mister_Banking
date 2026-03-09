@@ -11,7 +11,11 @@ const PeopleLedger = () => {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [editingUser, setEditingUser] = useState(null);
-    const [editData, setEditData] = useState({ full_name: '', email: '' });
+    const [editData, setEditData] = useState({
+        full_name: '', email: '', date_of_birth: '', password: '',
+        is_active: true, is_admin: false, kyc_status: 'unverified',
+        trading_blocked: false, trading_block_reason: ''
+    });
 
     // NEW USER STATE
     const [isCreatingUser, setIsCreatingUser] = useState(false);
@@ -40,14 +44,38 @@ const PeopleLedger = () => {
         fetchUsers();
     }, []);
 
-    const handleEditStart = (user) => {
-        setEditingUser(user);
-        setEditData({ full_name: user.name, email: user.email });
+    const handleEditStart = async (user) => {
+        try {
+            // Temporarily set editing user to show loading state if needed
+            setEditingUser({ ...user, isLoading: true });
+            const response = await api.get(`/admin/users/${user.user_id}`);
+            const fullUser = response.data;
+            setEditData({
+                full_name: fullUser.full_name || '',
+                email: fullUser.email || '',
+                date_of_birth: fullUser.date_of_birth || '',
+                password: '', // Only send if changed
+                is_active: fullUser.is_active,
+                is_admin: fullUser.is_admin,
+                kyc_status: fullUser.kyc_status || 'unverified',
+                trading_blocked: fullUser.trading_blocked || false,
+                trading_block_reason: fullUser.trading_block_reason || ''
+            });
+            setEditingUser(fullUser);
+        } catch (error) {
+            showToast('Failed to fetch full user profile.', 'error');
+            setEditingUser(null);
+        }
     };
 
     const handleEditSave = async () => {
         try {
-            await api.patch(`/admin/users/${editingUser.user_id}/edit-profile`, editData);
+            const payload = { ...editData };
+            // Strip empty password to avoid backend attempting to hash an empty string
+            if (!payload.password) {
+                delete payload.password;
+            }
+            await api.patch(`/admin/users/${editingUser.id || editingUser.user_id}/edit-profile`, payload);
             showToast('Identity records updated successfully.', 'success');
             setEditingUser(null);
             fetchUsers();
@@ -208,7 +236,7 @@ const PeopleLedger = () => {
                             </button>
                         </div>
 
-                        <div className="space-y-4 mb-8">
+                        <div className="space-y-4 mb-8 max-h-[60vh] overflow-y-auto px-1 scrollbar-hide">
                             <Input
                                 label="Full Legal name"
                                 value={editData.full_name}
@@ -219,6 +247,79 @@ const PeopleLedger = () => {
                                 value={editData.email}
                                 onChange={(e) => setEditData({ ...editData, email: e.target.value })}
                             />
+                            <Input
+                                label="Date of Birth"
+                                type="date"
+                                value={editData.date_of_birth}
+                                onChange={(e) => setEditData({ ...editData, date_of_birth: e.target.value })}
+                            />
+                            <Input
+                                label="New Password (Optional)"
+                                type="password"
+                                placeholder="Leave blank to keep current"
+                                value={editData.password}
+                                onChange={(e) => setEditData({ ...editData, password: e.target.value })}
+                            />
+
+                            <div className="grid grid-cols-2 gap-4 mt-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Account Status</label>
+                                    <select
+                                        className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                                        value={editData.is_active.toString()}
+                                        onChange={(e) => setEditData({ ...editData, is_active: e.target.value === 'true' })}
+                                    >
+                                        <option value="true">Active (Whitelisted)</option>
+                                        <option value="false">Suspended (Blacklisted)</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">System Role</label>
+                                    <select
+                                        className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                                        value={editData.is_admin.toString()}
+                                        onChange={(e) => setEditData({ ...editData, is_admin: e.target.value === 'true' })}
+                                    >
+                                        <option value="false">Standard Citizen</option>
+                                        <option value="true">Foundation Admin</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 mt-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">KYC / AML Status</label>
+                                <select
+                                    className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                                    value={editData.kyc_status}
+                                    onChange={(e) => setEditData({ ...editData, kyc_status: e.target.value })}
+                                >
+                                    <option value="unverified">Unverified (Restricted Limits)</option>
+                                    <option value="pending">Pending Review</option>
+                                    <option value="verified">Verified (Infinite Escrow)</option>
+                                </select>
+                            </div>
+
+                            <div className="p-4 border border-destructive/20 bg-destructive/5 rounded-2xl space-y-4 mt-6">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1">Trading Blockade</label>
+                                    <select
+                                        className="bg-card w-32 border border-destructive/30 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-destructive/20 text-destructive appearance-none font-bold"
+                                        value={editData.trading_blocked.toString()}
+                                        onChange={(e) => setEditData({ ...editData, trading_blocked: e.target.value === 'true' })}
+                                    >
+                                        <option value="false">Allowed</option>
+                                        <option value="true">Blocked</option>
+                                    </select>
+                                </div>
+                                {editData.trading_blocked && (
+                                    <Input
+                                        label="Blockade Reason (Shown to User)"
+                                        placeholder="e.g. Suspicious volume detected. Contact support."
+                                        value={editData.trading_block_reason}
+                                        onChange={(e) => setEditData({ ...editData, trading_block_reason: e.target.value })}
+                                    />
+                                )}
+                            </div>
                         </div>
 
                         <div className="flex gap-3">

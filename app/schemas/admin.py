@@ -39,6 +39,8 @@ class AdminUserUpdate(BaseModel):
     full_name: Optional[str] = None
     user_id: Optional[int] = None
     email: Optional[EmailStr] = None
+    date_of_birth: Optional[str] = None
+    password: Optional[str] = None
     account_number: Optional[str] = None
     is_active: Optional[bool] = None
     is_admin: Optional[bool] = None

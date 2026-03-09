@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.data.database import get_db
 from app.core.security import get_current_user
-from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, PinRequest
+from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, PinRequest, ChangePasswordRequest
 from app.schemas.user import UserResponse
 from app.services.auth_service import register_user, login_user, set_pin, verify_pin
 
@@ -43,3 +43,11 @@ def check_pin(data: PinRequest, db: Session = Depends(get_db),
     
     # ## If they get it right, we let them through.
     return {"valid": True, "message": "Access granted to the vault."}
+
+
+@router.post("/change-password")
+def update_login_password(data: ChangePasswordRequest, db: Session = Depends(get_db),
+                          current_user=Depends(get_current_user)):
+    """Upgrade security credentials: User must know their old key to set a new one."""
+    from app.services.auth_service import change_password
+    return change_password(db, current_user.id, data.old_password, data.new_password)

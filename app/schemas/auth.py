@@ -20,3 +20,8 @@ class TokenResponse(BaseModel):
 
 class PinRequest(BaseModel):
     pin: str = Field(..., min_length=4, max_length=4, pattern="^[0-9]{4}$", description="Strictly a 4-digit numerical PIN.")
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str = Field(..., min_length=6)
