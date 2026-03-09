@@ -1,0 +1,25 @@
+[Unit]
+Description=Mister Banking Backend Service (Gunicorn + Uvicorn)
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/misterbanking
+Environment="PATH=/var/www/misterbanking/venv/bin"
+Environment="DATABASE_URL=sqlite:///./app/data/misterbanking.db"
+Environment="SESSION_SECRET=REPLACE_WITH_LONG_RANDOM_STRING"
+
+# ## RUN COMMAND
+# We use Gunicorn with Uvicorn workers for production stability.
+# 4 workers is a good start for a standard VPS.
+ExecStart=/var/www/misterbanking/venv/bin/gunicorn \
+    --workers 4 \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --bind 127.0.0.1:5000 \
+    app.main:app
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

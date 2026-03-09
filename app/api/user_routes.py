@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from app.data.database import get_db
 from app.core.security import get_current_user
-from app.schemas.user import UserResponse
+from app.schemas.user import UserResponse, UserUpdate
 from app.schemas.transaction import TransactionResponse
 from app.models.transaction import Transaction 
 from app.services.account_service import get_user_accounts
@@ -41,6 +41,21 @@ def get_profile(db: Session = Depends(get_db), current_user=Depends(get_current_
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.patch("/me", response_model=UserResponse)
+def update_me(
+    data: UserUpdate, 
+    db: Session = Depends(get_db), 
+    current_user=Depends(get_current_user)
+):
+    """
+    Update personal identity records (DOB, Full Name, etc.)
+    """
+    from app.services.user_service import update_user
+    updated_user = update_user(db, current_user.id, data.model_dump(exclude_unset=True))
+    if not updated_user:
+        raise HTTPException(status_code=404, detail="Identity not found.")
+    return updated_user
 
 # -------------------- FINANCIAL HISTORY --------------------
 

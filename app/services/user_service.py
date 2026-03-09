@@ -29,3 +29,18 @@ def get_user_by_email(db: Session, email: str):
 def get_user_by_id(db: Session, user_id: int):
     # ## Core identity retrieval. Fast, reliable.
     return db.query(User).filter(User.id == user_id).first()
+
+def update_user(db: Session, user_id: int, user_data: dict):
+    # ## Locating the user in the ledger.
+    user = get_user_by_id(db, user_id)
+    if not user:
+        return None
+    
+    # ## Patching the identity records with the provided delta.
+    for key, value in user_data.items():
+        if value is not None:
+            setattr(user, key, value)
+            
+    db.commit()
+    db.refresh(user)
+    return user

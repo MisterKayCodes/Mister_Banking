@@ -195,6 +195,64 @@ const Settings = () => {
 
                     {/* Right Column - Forms */}
                     <div className="lg:col-span-8 space-y-8">
+                        {/* Personal Information */}
+                        <section className="bg-card border border-border rounded-[2.5rem] p-8">
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="bg-info/10 p-3 rounded-2xl text-info">
+                                    <Icon name="User" size={24} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-heading font-bold">Personal Profile</h2>
+                                    <p className="text-xs text-muted-foreground">Manage your legal identity details.</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2 text-left">
+                                    <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Full Legal Name</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-muted border-none rounded-xl p-4 text-sm focus:ring-2 focus:ring-info/20 transition-all"
+                                        value={user?.full_name || ''}
+                                        onChange={(e) => setUser({ ...user, full_name: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2 text-left">
+                                    <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Date of Birth</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-muted border-none rounded-xl p-4 text-sm focus:ring-2 focus:ring-info/20 transition-all font-mono"
+                                        placeholder="YYYY-MM-DD"
+                                        value={user?.date_of_birth || ''}
+                                        onChange={(e) => setUser({ ...user, date_of_birth: e.target.value })}
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <button
+                                        onClick={async () => {
+                                            setIsLoading(true);
+                                            try {
+                                                await api.patch('/users/me', {
+                                                    full_name: user.full_name,
+                                                    date_of_birth: user.date_of_birth
+                                                });
+                                                setNotification({ type: 'success', message: 'Identity records updated successfully.' });
+                                                fetchProfile();
+                                            } catch (err) {
+                                                setNotification({ type: 'error', message: 'Failed to update identity records.' });
+                                            } finally {
+                                                setIsLoading(false);
+                                            }
+                                        }}
+                                        disabled={isLoading}
+                                        className="w-full py-4 bg-info text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50"
+                                    >
+                                        {isLoading ? 'Updating Vault...' : 'Save Profile Changes'}
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+
                         {/* Security Section */}
                         <div className="space-y-6">
                             {/* PIN Reset */}
