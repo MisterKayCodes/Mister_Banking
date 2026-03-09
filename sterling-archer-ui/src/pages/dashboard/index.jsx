@@ -25,13 +25,13 @@ const Dashboard = () => {
   const fetchAllData = async () => {
     try {
       setLoading(true);
-      const userResponse = await api.get('/users/me');
+      const userResponse = await api.get('users/me');
       setUserData(userResponse.data);
       setAccounts(userResponse.data.accounts || []);
       setWallet(userResponse.data.wallet || null);
 
       setTransactionsLoading(true);
-      const txResponse = await api.get('/users/me/transactions');
+      const txResponse = await api.get('users/me/transactions');
       setTransactions(txResponse.data);
     } catch (error) {
       console.error('Vault Access Error:', error);
