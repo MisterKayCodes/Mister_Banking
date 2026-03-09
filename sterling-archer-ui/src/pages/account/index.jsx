@@ -39,9 +39,9 @@ const Account = () => {
     try {
       setLoading(true);
       const [accResponse, txResponse, userRes] = await Promise.all([
-        api.get(`/accounts/${accountId}`),
-        api.get(`/transactions/`),
-        api.get(`/users/me`)
+        api.get(`accounts/${accountId}`),
+        api.get(`transactions/`),
+        api.get(`users/me`)
       ]);
 
       setUserProfile(userRes.data);

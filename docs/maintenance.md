@@ -28,8 +28,21 @@ Fixed the "Back" button logic. Instead of sending the user to the "Front Gate" (
 ### 4. Nginx Receptionist Policy
 Updated the Nginx configuration to only proxy requests that start with `/api`.
 
-## How to Verify
-1. Log in to the portal.
-2. Click "Details" on your account.
-3. The page should load perfectly without the Nginx intercept.
-4. If an error occurs, the "Back" button should return you to the dashboard.
+## 16. Phase 16: The SSL Lockout (Restoring the Front Gate) 🔒🚧
+**Analogy:** We were trying to update the blueprints for the Receptionist, but we accidentally swapped the **Security Gate** map with an old one from before the locks were installed. Now, the gate is locked, and nobody can get in!
+
+### The Problem:
+`scripts/nginx_misterbanking.conf` is a "generic" map. When we copied it over, it deleted the **SSL Keys** (HTTPS) that Certbot had set up.
+
+### The Fix:
+We need to manually put the SSL keys back into the configuration OR tell the Security Guard (Certbot) to redo the locks.
+
+## New Recovery Procedure (Run these to get back online):
+1.  **On the VPS:** Run Certbot again to re-lock the gate.
+```bash
+sudo certbot --nginx -d sterlingarchertrust.com -d www.sterlingarchertrust.com
+```
+2.  **Verify the Receptionist:**
+```bash
+sudo nginx -t && sudo systemctl restart nginx
+```
