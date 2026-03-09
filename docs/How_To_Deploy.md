@@ -91,6 +91,30 @@ sudo chmod -R 777 /var/www/misterbanking/app/data
 ```
 *   **ELI5:** "I don't care about the locks! Open every door in the data room so the chef can write in the guest book!"
 
+## 14. Phase 14: The Dubious Owner (Who Owns the Land?) 🤨
+**Analogy:** You are the **Landlord** (root), but you gave the keys to the **Security Guard** (www-data). When you try to come back and move some furniture (git pull), the Furniture Company (Git) says: "Wait, I don't know who owns this place anymore! I'm not moving anything until you sign this paper."
+
+### The Problem:
+Because we changed the owner to `www-data`, Git is being extra cautious and won't pull new code until we tell it: "It's okay, I trust this folder."
+
+### The Fix:
+```bash
+sudo git config --global --add safe.directory /var/www/misterbanking
+```
+*   **ELI5:** We signed the paper telling Git that we are the boss and the land is safe.
+
+## 15. Phase 15: The Blueprint Fight (Merge Conflict) 📝🥊
+**Analogy:** You try to bring in the new blueprints (`git pull`), but the foreman on-site (the VPS) says: "Wait! I already scribbled some notes on the old blueprints! If I take your new ones, my notes will be lost!"
+
+### The Problem:
+Since we manually edited files on the VPS to fix things, Git is afraid of overwriting them. We need to tell Git: "Throw away the scribbled notes! The blueprints from the main office (GitHub) are the only ones that matter."
+
+### The Fix:
+```bash
+git reset --hard origin/main
+```
+*   **ELI5:** This is like using a giant eraser to wipe the old blueprints clean and copying the new ones exactly.
+
 ## 13. Phase 13: The Port 5000 Trap (The Back Door) 🚪🚧
 **Analogy:** You are a guest in the hotel. You want a pizza. Instead of calling the **receptionist** (Nginx) on the room phone, you try to climb out the window and walk to the **Kitchen's Back Door** (Port 5000). But the back door is locked and there is a giant fence (Firewall) in the way!
 
@@ -106,11 +130,14 @@ Since we changed the "painting" (the frontend code), we have to repaint the hote
 2.  **On the VPS:**
 ```bash
 cd /var/www/misterbanking
-git pull origin main
+# FORCIBLY SYNC WITH GITHUB:
+git fetch origin
+git reset --hard origin/main
+# THEN REBUILD:
 cd sterling-archer-ui
 npm run build
 ```
-*   **ELI5:** We sent the new blueprints to the server (`pull`) and then repainted the house (`build`).
+*   **ELI5:** We erased the messy notes (`reset`), copied the new blueprints, and then repainted the house (`build`).
 
 ## 12. Phase 12: API Roadblocks (The Phone Lines) ☎️
 **Analogy:** You are in the hotel room and try to call the kitchen to order food. If the phone lines are crossed or disconnected, the chef never hears you.
