@@ -4,6 +4,7 @@ import Icon from '../../../components/AppIcon';
 import { useToast } from 'hooks/useToast';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
+import LedgerTimeMachine from './LedgerTimeMachine';
 
 const FinancialControl = () => {
     const { showToast, ToastComponent } = useToast();
@@ -200,6 +201,9 @@ const FinancialControl = () => {
                     </form>
                 </div>
             </div>
+            
+            {/* The Ledger Time Machine */}
+            <LedgerTimeMachine />
         </div>
     );
 };

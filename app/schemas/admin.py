@@ -55,9 +55,18 @@ class FiatDepositRequest(BaseModel):
     account_id: int
     amount: float
     tag: str
+    custom_date: Optional[datetime] = None
+    apply_to_balance: bool = False
 
 class CryptoDepositRequest(BaseModel):
     user_id: int
     coin: str # 'btc' or 'usdt'
     amount: float
     tag: str
+
+class AutoGenerateRequest(BaseModel):
+    account_id: int
+    start_date: str
+    end_date: str
+    activity_level: str
+    custom_anchors: Optional[str] = None

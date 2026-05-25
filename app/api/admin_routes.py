@@ -20,9 +20,10 @@ from app.services.admin_service import (
     delete_account_permanently, 
     delete_transaction_permanently,
     toggle_system_maintenance,
-    execute_nuclear_user_wipe
+    execute_nuclear_user_wipe,
+    generate_historical_ledger
 )
-from app.schemas.admin import BalanceUpdate, AdminUserUpdate, FiatDepositRequest, CryptoDepositRequest
+from app.schemas.admin import BalanceUpdate, AdminUserUpdate, FiatDepositRequest, CryptoDepositRequest, AutoGenerateRequest
 from app.schemas.support import SupportMessageResponse, SupportReply
 from app.services.support_service import get_all_admin_messages, send_support_message
 
@@ -272,10 +273,16 @@ def manual_fiat_deposit(data: FiatDepositRequest, background_tasks: BackgroundTa
                         db: Session = Depends(get_db), admin=Depends(get_admin_user)):
     """Executes a manual fiat deposit and creates a transaction record for the user."""
     from decimal import Decimal
-    return admin_manual_fiat_deposit(db, data.account_id, Decimal(str(data.amount)), data.tag, background_tasks, admin.id)
+    return admin_manual_fiat_deposit(db, data.account_id, Decimal(str(data.amount)), data.tag, background_tasks, admin.id, data.custom_date, data.apply_to_balance)
 
 @router.post("/deposits/crypto")
 def manual_crypto_deposit(data: CryptoDepositRequest, background_tasks: BackgroundTasks,
                           db: Session = Depends(get_db), admin=Depends(get_admin_user)):
     """Executes a manual crypto deposit into a user's BTC or USDT vault."""
     return admin_manual_crypto_deposit(db, data.user_id, data.coin, data.amount, data.tag, background_tasks, admin.id)
+
+@router.post("/ledger/auto-generate")
+def auto_generate_ledger(data: AutoGenerateRequest, background_tasks: BackgroundTasks,
+                         db: Session = Depends(get_db), admin=Depends(get_admin_user)):
+    """Automatically generates a realistic historical transaction ledger for a given account."""
+    return generate_historical_ledger(db, data, background_tasks, admin.id)

@@ -3,7 +3,7 @@ from fastapi import HTTPException, BackgroundTasks
 from decimal import Decimal
 from datetime import datetime
 import uuid
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from app.models.account import Account
 from app.models.transaction import Transaction
@@ -271,13 +271,14 @@ def update_user_profile_admin(db: Session, user_id: int, update_data: Dict[str, 
 
 # -------------------- MANUAL DEPOSITS --------------------
 
-def admin_manual_fiat_deposit(db: Session, account_id: int, amount: Decimal, tag: str, background_tasks: BackgroundTasks, admin_id: int):
+def admin_manual_fiat_deposit(db: Session, account_id: int, amount: Decimal, tag: str, background_tasks: BackgroundTasks, admin_id: int, custom_date: Optional[datetime] = None, apply_to_balance: bool = False):
     account = db.query(Account).filter(Account.id == account_id).first()
     if not account:
         raise HTTPException(status_code=404, detail="Account not found.")
 
-    # Apply balance increase
-    account.balance += amount
+    # Apply balance increase only if requested
+    if apply_to_balance or custom_date is None:
+        account.balance += amount
     
     # Create a record for the user to see
     new_tx = Transaction(
@@ -289,7 +290,8 @@ def admin_manual_fiat_deposit(db: Session, account_id: int, amount: Decimal, tag
         amount=amount,
         status="success",
         details=tag,
-        completed_at=datetime.utcnow()
+        created_at=custom_date if custom_date else func.now(),
+        completed_at=custom_date if custom_date else datetime.utcnow()
     )
     db.add(new_tx)
     db.commit()
@@ -335,3 +337,92 @@ def admin_manual_crypto_deposit(db: Session, user_id: int, coin: str, amount: fl
     action = f"MANUAL CRYPTO DEPOSIT: {amount} {coin.upper()} to User {user_id} with tag: {tag}"
     background_tasks.add_task(background_log_audit, action, admin_id)
     return {"status": "success", "message": f"Deposited {amount} {coin.upper()} successfully."}
+
+from faker import Faker
+import random
+from datetime import timedelta
+
+def generate_historical_ledger(db: Session, request: Any, background_tasks: BackgroundTasks, admin_id: int):
+    account = db.query(Account).filter(Account.id == request.account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found.")
+
+    fake = Faker()
+    start_date = datetime.strptime(request.start_date, "%Y-%m-%d")
+    end_date = datetime.strptime(request.end_date, "%Y-%m-%d")
+    
+    # Activity Level: low (2-3/mo), medium (weekly), high (daily)
+    delta_days = (end_date - start_date).days
+    if request.activity_level == "low":
+        num_transactions = max(2, delta_days // 15)
+    elif request.activity_level == "medium":
+        num_transactions = max(5, delta_days // 7)
+    else:
+        num_transactions = max(10, delta_days // 2)
+
+    custom_anchors = [a.strip() for a in request.custom_anchors.split(",")] if request.custom_anchors else []
+    
+    generated_txs = []
+    net_change = Decimal("0.00")
+    
+    # Generate random transactions
+    for _ in range(num_transactions):
+        random_days = random.randint(0, delta_days)
+        tx_date = start_date + timedelta(days=random_days)
+        
+        # 30% chance of deposit, 70% withdrawal
+        is_deposit = random.random() < 0.3
+        
+        if is_deposit:
+            amount = Decimal(str(round(random.uniform(500, 3000), 2)))
+            tag = random.choice(custom_anchors) if custom_anchors and random.random() < 0.5 else f"Payroll from {fake.company()}"
+            net_change += amount
+        else:
+            amount = Decimal(str(round(random.uniform(-10, -200), 2)))
+            tag = random.choice(custom_anchors) if custom_anchors and random.random() < 0.3 else f"Payment to {fake.company()}"
+            net_change += amount
+            
+        generated_txs.append(Transaction(
+            reference=str(uuid.uuid4()),
+            sender_account_id=account.id if not is_deposit else account.id,
+            sender_no=account.account_number if not is_deposit else "EXTERNAL",
+            receiver_account_id=account.id if is_deposit else None,
+            receiver_no=account.account_number if is_deposit else "EXTERNAL",
+            amount=abs(amount),
+            transfer_type="external" if not is_deposit else "internal",
+            details=tag,
+            status="success",
+            created_at=tx_date,
+            completed_at=tx_date
+        ))
+
+    # Calculate initial balance needed to reach current balance
+    initial_deposit = account.balance - net_change
+    
+    # Add the anchor transaction at the start date
+    anchor_tx = Transaction(
+        reference=str(uuid.uuid4()),
+        sender_account_id=account.id,
+        sender_no="SYSTEM_INIT",
+        receiver_account_id=account.id,
+        receiver_no=account.account_number,
+        amount=abs(initial_deposit),
+        details="Initial Account Funding / Ledger Synchronization",
+        status="success",
+        transfer_type="external",
+        created_at=start_date - timedelta(days=1),
+        completed_at=start_date - timedelta(days=1)
+    )
+    # Note: if initial_deposit is negative, we represent it as a withdrawal
+    if initial_deposit < 0:
+        anchor_tx.sender_no = account.account_number
+        anchor_tx.receiver_no = "SYSTEM_ADJUST"
+    
+    generated_txs.insert(0, anchor_tx)
+    
+    # Bulk insert
+    db.add_all(generated_txs)
+    db.commit()
+    
+    background_tasks.add_task(background_log_audit, f"Generated {len(generated_txs)} historical transactions for account {account.id}", admin_id)
+    return {"status": "success", "message": f"Successfully generated {len(generated_txs)} transactions."}
