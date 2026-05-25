@@ -98,7 +98,7 @@ def create_transaction(db: Session, user_id: int, data: TransactionCreate):
     else:
         sender.balance -= total_deduction
         new_tx.status = "pending"
-        new_tx.receiver_no = data.external_account_no
+        new_tx.receiver_no = data.external_iban_or_acc
         new_tx.external_bank_name = data.external_bank_name
 
     db.add(new_tx)

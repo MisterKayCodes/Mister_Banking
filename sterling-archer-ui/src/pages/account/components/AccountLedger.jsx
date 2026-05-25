@@ -48,7 +48,8 @@ const AccountLedger = ({ transactions = [], loading, accountIdentifier }) => {
           </thead>
           <tbody className="divide-y divide-border">
             {transactions.map((tx) => {
-              const isDebit = String(tx.sender_no) === String(accountIdentifier);
+              const ids = Array.isArray(accountIdentifier) ? accountIdentifier : [accountIdentifier];
+              const isDebit = ids.some(id => id && String(tx.sender_no) === String(id));
               return (
                 <tr
                   key={tx.id}
@@ -76,7 +77,9 @@ const AccountLedger = ({ transactions = [], loading, accountIdentifier }) => {
                   </td>
                   <td className={`px-6 py-4 text-right font-mono font-bold ${isDebit ? 'text-destructive' : 'text-success'}`}>
                     {isDebit ? '-' : '+'}{tx.currency === 'BTC' ? '' : '$'}
-                    {Number(tx.amount).toLocaleString()}
+                    {tx.currency === 'BTC' 
+                      ? Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) 
+                      : Number(tx.amount).toLocaleString()}
                   </td>
                 </tr>
               );
@@ -103,7 +106,9 @@ const AccountLedger = ({ transactions = [], loading, accountIdentifier }) => {
               <div className="text-center pb-6 border-b border-dashed border-border">
                 <p className="text-xs text-muted-foreground uppercase font-bold mb-1">Total Amount</p>
                 <h2 className="text-4xl font-heading font-black">
-                  {selectedTx.currency === 'BTC' ? '' : '$'}{Number(selectedTx.amount).toLocaleString()}
+                  {selectedTx.currency === 'BTC' 
+                    ? Number(selectedTx.amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) 
+                    : `$${Number(selectedTx.amount).toLocaleString()}`}
                 </h2>
                 <p className="text-xs text-success font-bold mt-2">● {selectedTx.status.toUpperCase()}</p>
               </div>

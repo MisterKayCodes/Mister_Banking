@@ -156,7 +156,13 @@ const Crypto = () => {
   const handleSendCrypto = async (formData) => {
     try {
       setIsSubmitting(true);
-      await api.post('/transactions/send-crypto', formData);
+      
+      const payload = {
+        ...formData,
+        account_no: account?.account_number || account?.account_no || account?.id?.toString()
+      };
+
+      await api.post('/transactions/send-crypto', payload);
       setNotification({ message: "Blockchain transfer broadcasted successfully.", type: 'success' });
       setActiveModal(null);
       await fetchCryptoData();
@@ -212,7 +218,7 @@ const Crypto = () => {
           <AccountLedger
             transactions={transactions}
             loading={loading}
-            accountIdentifier={account?.btc_address || account?.account_number}
+            accountIdentifier={[account?.account_number, account?.btc_address, account?.usdt_address]}
           />
         </div>
       </main>

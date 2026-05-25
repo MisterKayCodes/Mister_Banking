@@ -87,35 +87,91 @@ const Account = () => {
     }
   };
 
+  // ==================== 🛠️ HELPER FUNCTION FOR ERROR MESSAGES ====================
+  // 🛠️ WHAT: This function converts backend error responses into readable text
+  // 🛠️ WHY: FastAPI returns errors as an array of objects, not a simple string.
+  // 🛠️ WHY: React cannot render objects - they cause the "Objects are not valid as a React child" error.
+  // 🛠️ HOW: It checks if the error is a string, an array, or something else, and converts it safely.
+  const formatErrorMessage = (error) => {
+    // Default fallback message
+    let errorMessage = "Transfer failed. Please try again.";
+    
+    // Get the detail from the response (FastAPI sends errors in .data.detail)
+    const detail = error.response?.data?.detail;
+    
+    if (detail) {
+      // Case 1: It's already a plain string (e.g., "Insufficient funds")
+      if (typeof detail === 'string') {
+        errorMessage = detail;
+      } 
+      // Case 2: It's an array of validation errors (e.g., Pydantic errors)
+      // Example: [{ "msg": "String should have at least 10 characters", "loc": ["body", "to_account_no"] }]
+      else if (Array.isArray(detail) && detail.length > 0) {
+        // Extract just the 'msg' from each error and join them with commas
+        errorMessage = detail.map(err => err.msg).join(', ');
+      }
+      // Case 3: It's some other kind of object (fallback)
+      else if (typeof detail === 'object') {
+        errorMessage = JSON.stringify(detail);
+      }
+    }
+    
+    return errorMessage;
+  };
+  // =============================================================================
+
   const executeTransfer = async (formData) => {
     try {
       setIsSubmitting(true);
-      const payload = {
-        from_account_no: account.account_number,
-        amount: parseFloat(formData.amount),
-        transfer_type: formData.transfer_type,
-        pin: formData.pin,
-        ...(formData.transfer_type === 'internal'
-          ? { to_account_no: formData.to_account_no }
-          : { ...formData })
-      };
+      let payload = {
+  from_account_no: account.account_number,
+  amount: parseFloat(formData.amount),
+  transfer_type: formData.transfer_type,
+  pin: formData.pin,
+};
+
+if (formData.transfer_type === 'internal') {
+  // Internal transfer: needs to_account_no
+  payload.to_account_no = formData.to_account_no;
+} else {
+  // External transfer: needs external bank details
+  payload.external_bank_name = formData.external_bank_name;
+  payload.external_iban_or_acc = formData.external_iban_or_acc;
+  payload.external_swift_bic = formData.external_swift_bic;
+  payload.recipient_full_name = formData.recipient_full_name;
+  payload.purpose_of_transfer = formData.purpose_of_transfer;
+  // Do NOT include to_account_no
+}
       await api.post('/transactions/', payload);
       setNotification({ message: "Funds dispatched successfully.", type: 'success' });
       setActiveModal(null);
       fetchAccountData();
     } catch (error) {
-      setNotification({ message: error.response?.data?.detail || "Transfer failed.", type: 'error' });
+      // 🛠️ OLD CODE (commented out for learning):
+      // setNotification({ message: error.response?.data?.detail || "Transfer failed.", type: 'error' });
+      // 🛠️ WHY THIS FAILED: error.response.data.detail is an ARRAY of objects, not a string.
+      // 🛠️ React tried to render [object Object] and crashed.
+      
+      // 🛠️ NEW CODE: Use the helper function to safely convert any error format to a readable string
+      const errorMessage = formatErrorMessage(error);
+      setNotification({ message: errorMessage, type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
   };
+
   const handlePurchase = async (formData) => {
     try {
       setIsSubmitting(true);
+      console.log("DEBUG: Current account object:", account);
+      console.log("DEBUG: account.account_number is:", account?.account_number);
+      
       const payload = {
         ...formData,
-        account_no: account.account_number
+        account_no: account?.account_number
       };
+      
+      console.log("DEBUG: Final payload being sent:", payload);
 
       await api.post('/transactions/buy-crypto', payload);
       setNotification({ message: "Asset acquisition finalized. Funds deducted from balance.", type: 'success' });
@@ -124,10 +180,13 @@ const Account = () => {
       // Refresh to update balance
       await fetchAccountData();
     } catch (error) {
-      setNotification({
-        message: error.response?.data?.detail || "Exchange sequence failed.",
-        type: 'error'
-      });
+      // 🛠️ OLD CODE (commented out for learning):
+      // setNotification({ message: error.response?.data?.detail || "Exchange sequence failed.", type: 'error' });
+      // 🛠️ SAME ISSUE: error.response.data.detail is an array of objects
+      
+      // 🛠️ NEW CODE: Use the same helper function for consistency
+      const errorMessage = formatErrorMessage(error);
+      setNotification({ message: errorMessage, type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -173,7 +232,7 @@ const Account = () => {
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
             <div className="xl:col-span-2">
-              <AccountLedger transactions={transactions} loading={loading} accountIdentifier={account?.account_number || account?.btc_address} />
+              <AccountLedger transactions={transactions} loading={loading} accountIdentifier={[account?.account_number, account?.btc_address, account?.usdt_address]} />
             </div>
             <div className="space-y-8">
               <BalanceChart data={chartData} />
