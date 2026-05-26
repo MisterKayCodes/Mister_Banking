@@ -86,6 +86,8 @@ app.include_router(user_router, prefix="/api")
 app.include_router(account_router, prefix="/api")
 app.include_router(transaction_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
+from app.api.bridge_routes import router as bridge_router
+app.include_router(bridge_router, prefix="/api")
 app.include_router(notification_router, prefix="/api") # Registered for the React frontend!
 
 # ## THE VAULT STORAGE

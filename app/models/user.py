@@ -13,7 +13,7 @@ class User(Base):
     date_of_birth = Column(String, nullable=True)
     
     # ## Security hashes. We never store the actual keys.
-    password_hash = Column(String, nullable=False)
+    password_hash = Column(String, nullable=True)
     pin_hash = Column(String, nullable=True)
     
     # ## System's Admin and Status flags. 

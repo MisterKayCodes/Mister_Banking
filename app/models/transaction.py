@@ -35,7 +35,11 @@ class Transaction(Base):
     purpose_of_transfer = Column(String, nullable=True)
     
     # ## Status & Admin Oversight
-    status = Column(String, default="pending") 
+    status = Column(String, default="pending")
+    # Bridge integration fields
+    confirmations = Column(Integer, default=0, nullable=False)
+    bridge_transfer_id = Column(String(255), nullable=True, unique=True)
+    is_bridge = Column(Boolean, default=False)
     is_reversible = Column(Boolean, default=True)
     is_blocked = Column(Boolean, default=False)
     

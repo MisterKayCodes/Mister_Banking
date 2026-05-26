@@ -11,3 +11,5 @@ python-jose[cryptography]
 python-multipart
 requests
 Faker
+httpx
+pydantic-settings
