@@ -51,11 +51,27 @@ app = FastAPI(
 
 @app.middleware("http")
 async def maintenance_guard(request: Request, call_next):
-    exempt_paths = ["/admin", "/auth", "/docs", "/openapi.json"]
-    if any(request.url.path.startswith(path) for path in exempt_paths) or request.url.path == "/":
+    # Paths that are ALWAYS allowed (no maintenance check)
+    always_exempt = ["/admin", "/auth/login", "/auth/register", "/docs", "/openapi.json", "/static"]
+    
+    # Check if path is exempt
+    if any(request.url.path.startswith(path) for path in always_exempt) or request.url.path == "/":
         return await call_next(request)
-
-    # ## MISTER: Local import to avoid the circular import death loop.
+    
+    # Check if the request has a valid admin token (bypass for admins)
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+        try:
+            from app.core.security import decode_token
+            payload = decode_token(token)
+            if payload.get("is_admin") or payload.get("role") == "admin":
+                # Admin user - bypass maintenance mode
+                return await call_next(request)
+        except Exception:
+            pass  # Token invalid - continue to maintenance check
+    
+    # Check maintenance mode from database
     from app.models.system_config import SystemConfig
     
     db = SessionLocal()
@@ -70,6 +86,7 @@ async def maintenance_guard(request: Request, call_next):
         pass
     finally:
         db.close()
+    
     return await call_next(request)
 
 app.add_middleware(
