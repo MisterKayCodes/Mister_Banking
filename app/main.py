@@ -52,7 +52,7 @@ app = FastAPI(
 @app.middleware("http")
 async def maintenance_guard(request: Request, call_next):
     # Paths that are ALWAYS allowed (no maintenance check)
-    always_exempt = ["/admin", "/auth/login", "/auth/register", "/docs", "/openapi.json", "/static"]
+    always_exempt = ["/admin", "/api/admin", "/auth/login", "/auth/register", "/docs", "/openapi.json", "/static"]
     
     # Check if path is exempt
     if any(request.url.path.startswith(path) for path in always_exempt) or request.url.path == "/":
