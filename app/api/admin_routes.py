@@ -106,6 +106,14 @@ def admin_delete_transaction(tx_id: int,
                              admin=Depends(get_admin_user)):
     return delete_transaction_permanently(db, tx_id, background_tasks, admin.id)
 
+@router.get("/system/maintenance")
+def get_maintenance_status(db: Session = Depends(get_db), admin=Depends(get_admin_user)):
+    from app.models.system_config import SystemConfig
+    cfg = db.query(SystemConfig).filter(SystemConfig.key == "maintenance_mode").first()
+    if cfg:
+        return {"maintenance_mode": cfg.value.lower() == "true"}
+    return {"maintenance_mode": False}
+
 @router.post("/system/maintenance")
 def set_maintenance(enabled: bool, 
                     background_tasks: BackgroundTasks,
