@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, File, UploadFile, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from app.data.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_current_user_or_suspended
 from app.schemas.user import UserResponse, UserUpdate
 from app.schemas.transaction import TransactionResponse
 from app.models.transaction import Transaction 
@@ -25,7 +25,7 @@ from app.models.kyc import KYCRequirement, KYCSubmission
 router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.get("/me", response_model=UserResponse)
-def get_profile(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def get_profile(db: Session = Depends(get_db), current_user=Depends(get_current_user_or_suspended)):
     try:
         # Reload the user with all their assets to ensure the frontend is updated correctly.
         user = db.query(User).options(

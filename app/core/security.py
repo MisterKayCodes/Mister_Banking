@@ -31,11 +31,37 @@ def create_access_token(data: dict) -> str:
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+def get_current_user_or_suspended(
+    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    db: Session = Depends(get_db),
+):
+    # ## Allow suspended users to fetch their profile (for suspension page)
+    # ## But reject invalid/expired tokens
+    from app.models.user import User
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id_str: str = payload.get("sub")
+        if user_id_str is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Badge payload is corrupted.")
+        user_id = int(user_id_str)
+    except (JWTError, Exception):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired session.")
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not recognized in the ledger.")
+    
+    # NOTE: We allow suspended users here!
+    # Frontend will detect is_active=false and show suspension page
+    return user
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
     db: Session = Depends(get_db),
 ):
     # ## The Gatekeeper check. We verify the badge before asking any questions.
+    # ## Rejects suspended users (use get_current_user_or_suspended for login/suspension scenarios)
     from app.models.user import User
     token = credentials.credentials
     try:
