@@ -25,3 +25,8 @@ class PinRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str = Field(..., min_length=6)
+
+
+class SuspendedUserResponse(BaseModel):
+    email: str
+    message: str = "Your account has been suspended due to suspicious activities. Please contact support for assistance."

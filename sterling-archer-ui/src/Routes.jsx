@@ -10,6 +10,7 @@ import Account from './pages/account';
 import Crypto from './pages/crypto'; // Importing the new Digital Asset Controller
 import KYCCenter from './pages/kyc-center'; // The new Verification Hub
 import Support from './pages/support'; // Private Client Relations
+import SuspendedAccount from './pages/suspended'; // Account Suspension Page
 import SetupPin from './pages/setup-pin';
 import Settings from './pages/settings';
 import ProtectedRoute from 'components/ProtectedRoute';
@@ -27,6 +28,7 @@ const Routes = () => {
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/sign-up" element={<SignUp />} />
+          <Route path="/suspended" element={<SuspendedAccount />} />
 
           {/* Private Routes - Only for verified Citizens */}
           <Route

@@ -86,7 +86,7 @@ def login_user(db: Session, email: str, password: str) -> str:
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
-            detail="This account has been frozen. Administrative action required."
+            detail=f"suspended:{user.email}"
         )
 
     return create_access_token({"sub": str(user.id)})

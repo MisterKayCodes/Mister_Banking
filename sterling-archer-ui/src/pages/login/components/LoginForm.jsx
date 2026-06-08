@@ -81,8 +81,16 @@ const LoginForm = () => {
         setErrors({ password: 'Connection failed. Ensure you are on the same WiFi network as the server.' });
         return;
       }
-      // Catch the error message from the service
+      
+      // Handle account suspension
       const serverMessage = error.response?.data?.detail || 'Invalid email or password. Access denied.';
+      if (serverMessage.startsWith('suspended:')) {
+        const suspendedEmail = serverMessage.replace('suspended:', '');
+        navigate(`/suspended?email=${encodeURIComponent(suspendedEmail)}`);
+        return;
+      }
+      
+      // Catch other errors
       setErrors({ password: serverMessage });
     } finally {
       setIsLoading(false);
