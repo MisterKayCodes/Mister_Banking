@@ -29,26 +29,29 @@ const ProtectedRoute = ({ children }) => {
         // Check if user account is still active
         if (!user.is_active) {
           // User has been suspended
-          // Keep token valid for support access
-          // But mark them as suspended
           setIsSuspended(true);
           setUserEmail(user.email);
           
-          // Only redirect if they're trying to access account pages
-          // Allow /live-support access for suspended users
-          if (location.pathname !== '/live-support') {
-            setLoading(false);
-            return;
+          // Allow /live-support for suspended users (they can contact support)
+          // But redirect to suspension page for all other routes
+          if (location.pathname === '/live-support') {
+            setAuthorized(true);
           }
+          
+          setLoading(false);
+          return;
         }
 
-        // User is active or accessing support while suspended - allow access
+        // User is active - allow access
         setAuthorized(true);
         setLoading(false);
       } catch (error) {
-        // Token invalid or API error - redirect to login
-        localStorage.removeItem('sa_auth_token');
-        localStorage.removeItem('user');
+        // Only clear token on 401 (unauthorized) errors
+        // Don't clear on network errors or other API errors
+        if (error.response?.status === 401) {
+          localStorage.removeItem('sa_auth_token');
+          localStorage.removeItem('user');
+        }
         setLoading(false);
       }
     };

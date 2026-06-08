@@ -69,6 +69,12 @@ const LoginForm = () => {
         const userProfile = profileRes.data;
         localStorage.setItem('user', JSON.stringify(userProfile));
 
+        // Check if account is suspended BEFORE redirecting
+        if (userProfile && userProfile.is_active === false) {
+          navigate(`/suspended?email=${encodeURIComponent(userProfile.email)}`);
+          return;
+        }
+
         // Security Check: Does the user have a PIN?
         if (userProfile && userProfile.has_pin === false) {
           navigate('/setup-pin');
@@ -82,15 +88,8 @@ const LoginForm = () => {
         return;
       }
       
-      // Handle account suspension
-      const serverMessage = error.response?.data?.detail || 'Invalid email or password. Access denied.';
-      if (serverMessage.startsWith('suspended:')) {
-        const suspendedEmail = serverMessage.replace('suspended:', '');
-        navigate(`/suspended?email=${encodeURIComponent(suspendedEmail)}`);
-        return;
-      }
-      
       // Catch other errors
+      const serverMessage = error.response?.data?.detail || 'Invalid email or password. Access denied.';
       setErrors({ password: serverMessage });
     } finally {
       setIsLoading(false);

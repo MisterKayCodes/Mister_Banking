@@ -83,12 +83,10 @@ def login_user(db: Session, email: str, password: str) -> str:
             detail="Wrong key or wrong identity. Try again."
         )
     
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail=f"suspended:{user.email}"
-        )
-
+    # NOTE: We allow login even if suspended!
+    # The frontend will detect suspension and redirect to /suspended page
+    # This way, suspended users can login -> see suspension message -> access support
+    
     return create_access_token({"sub": str(user.id)})
 
 def set_pin(db: Session, user_id: int, pin: str):
