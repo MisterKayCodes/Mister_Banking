@@ -76,6 +76,11 @@ class TransactionResponse(BaseModel):
     
     is_reversible: bool
     created_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    
+    # ## Admin view fields (populated for admin endpoints)
+    sender_account_id: Optional[int] = None
+    receiver_account_id: Optional[int] = None
 
     # #COPY: Pydantic V2 style to stop those warnings in pytest
     model_config = ConfigDict(from_attributes=True)

@@ -112,17 +112,86 @@ def approve_transaction(db: Session, tx_id: int, background_tasks: BackgroundTas
     if not tx or tx.status != "pending":
         raise HTTPException(status_code=400, detail="Transaction not in pending state.")
 
-    # ## Money movement logic
-    receiver = db.query(Account).filter(Account.id == tx.receiver_account_id).first()
-    if receiver:
-        receiver.balance += tx.amount
+    # ## For EXTERNAL transactions, we need to move the money to receiver
+    if tx.transfer_type == "external" and tx.receiver_account_id:
+        receiver = db.query(Account).filter(Account.id == tx.receiver_account_id).first()
+        if receiver:
+            receiver.balance += tx.amount
     
     tx.status = "success"
     tx.completed_at = datetime.utcnow()
     db.commit()
+    db.refresh(tx)
     
-    background_tasks.add_task(background_log_audit, f"Approved Tx {tx_id}", admin_id)
+    # Send notification to user
+    from app.services.notification_service import send_notification
+    sender_account = db.query(Account).filter(Account.id == tx.sender_account_id).first()
+    if sender_account:
+        send_notification(db, sender_account.user_id, 
+                         title="Transaction Approved", 
+                         message=f"Your transaction of ${tx.amount} has been approved.",
+                         n_type="success")
+    
+    background_tasks.add_task(background_log_audit, f"Admin {admin_id} approved transaction {tx_id}", admin_id)
     return tx
+
+def decline_transaction(db: Session, tx_id: int, reason: str = None, background_tasks: BackgroundTasks = None, admin_id: int = None):
+    tx = db.query(Transaction).filter(Transaction.id == tx_id).first()
+    if not tx or tx.status != "pending":
+        raise HTTPException(status_code=400, detail="Transaction not in pending state.")
+
+    # ## Refund sender: amount + fee back to account
+    sender = db.query(Account).filter(Account.id == tx.sender_account_id).first()
+    if sender:
+        sender.balance += (tx.amount + tx.fee)
+    
+    tx.status = "declined"
+    db.commit()
+    db.refresh(tx)
+    
+    # Send notification to user
+    from app.services.notification_service import send_notification
+    if sender:
+        msg = f"Your transaction of ${tx.amount} has been declined."
+        if reason:
+            msg += f" Reason: {reason}"
+        send_notification(db, sender.user_id, 
+                         title="Transaction Declined", 
+                         message=msg,
+                         n_type="error")
+    
+    action = f"Admin {admin_id} declined transaction {tx_id}"
+    if reason:
+        action += f" - Reason: {reason}"
+    if background_tasks:
+        background_tasks.add_task(background_log_audit, action, admin_id)
+    else:
+        log_audit(db, action, admin_id)
+    
+    return tx
+
+def get_all_transactions(db: Session, user_id: int = None, status: str = None, transfer_type: str = None, limit: int = 100, offset: int = 0):
+    query = db.query(Transaction)
+    
+    if user_id:
+        # Get all accounts for this user
+        accounts = db.query(Account).filter(Account.user_id == user_id).all()
+        account_ids = [acc.id for acc in accounts]
+        query = query.filter(
+            (Transaction.sender_account_id.in_(account_ids)) | 
+            (Transaction.receiver_account_id.in_(account_ids))
+        )
+    
+    if status:
+        query = query.filter(Transaction.status == status)
+    
+    if transfer_type:
+        query = query.filter(Transaction.transfer_type == transfer_type)
+    
+    # Order by newest first
+    query = query.order_by(Transaction.created_at.desc())
+    
+    return query.offset(offset).limit(limit).all()
 
 def block_transaction(db: Session, tx_id: int, background_tasks: BackgroundTasks, admin_id: int = None):
     tx = db.query(Transaction).filter(Transaction.id == tx_id).first()

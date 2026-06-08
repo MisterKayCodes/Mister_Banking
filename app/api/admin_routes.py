@@ -21,7 +21,10 @@ from app.services.admin_service import (
     delete_transaction_permanently,
     toggle_system_maintenance,
     execute_nuclear_user_wipe,
-    generate_historical_ledger
+    generate_historical_ledger,
+    approve_transaction,
+    decline_transaction,
+    get_all_transactions
 )
 from app.schemas.admin import BalanceUpdate, AdminUserUpdate, FiatDepositRequest, CryptoDepositRequest, AutoGenerateRequest
 from app.schemas.support import SupportMessageResponse, SupportReply
@@ -105,6 +108,47 @@ def admin_delete_transaction(tx_id: int,
                              db: Session = Depends(get_db), 
                              admin=Depends(get_admin_user)):
     return delete_transaction_permanently(db, tx_id, background_tasks, admin.id)
+
+# -------------------- TRANSACTION MANAGEMENT --------------------
+
+@router.get("/transactions")
+def view_all_transactions(
+    user_id: int = None,
+    status: str = None,
+    transfer_type: str = None,
+    limit: int = 100,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+    admin=Depends(get_admin_user)
+):
+    """
+    Retrieve all transactions in the system with optional filters.
+    Filters: user_id, status (pending/success/declined), transfer_type (internal/external)
+    """
+    from app.schemas.transaction import TransactionResponse
+    transactions = get_all_transactions(db, user_id, status, transfer_type, limit, offset)
+    return transactions
+
+@router.patch("/transactions/{tx_id}/approve")
+def admin_approve_transaction(
+    tx_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    admin=Depends(get_admin_user)
+):
+    """Approve a pending transaction and change its status to 'success'."""
+    return approve_transaction(db, tx_id, background_tasks, admin.id)
+
+@router.patch("/transactions/{tx_id}/decline")
+def admin_decline_transaction(
+    tx_id: int,
+    reason: str = None,
+    background_tasks: BackgroundTasks = None,
+    db: Session = Depends(get_db),
+    admin=Depends(get_admin_user)
+):
+    """Decline a pending transaction, refund sender, and change status to 'declined'."""
+    return decline_transaction(db, tx_id, reason, background_tasks, admin.id)
 
 @router.get("/system/maintenance")
 def get_maintenance_status(db: Session = Depends(get_db), admin=Depends(get_admin_user)):

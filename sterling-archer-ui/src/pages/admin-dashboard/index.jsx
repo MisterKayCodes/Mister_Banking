@@ -9,6 +9,7 @@ import FinancialControl from './components/FinancialControl';
 import CryptoCommander from './components/CryptoCommander';
 import SecurityLaws from './components/SecurityLaws';
 import SupportCenter from './components/SupportCenter';
+import TransactionLedger from './components/TransactionLedger';
 
 /**
  * Foundation Terminal - Main Command Hub
@@ -20,6 +21,7 @@ const AdminDashboard = () => {
 
     const tabs = [
         { id: 'people', label: 'People Management', icon: 'Users', component: PeopleLedger },
+        { id: 'transactions', label: 'Transaction Ledger', icon: 'TrendingUp', component: TransactionLedger },
         { id: 'financial', label: 'Financial Control', icon: 'DollarSign', component: FinancialControl },
         { id: 'crypto', label: 'Crypto & Trading', icon: 'Coins', component: CryptoCommander },
         { id: 'security', label: 'Security & Laws', icon: 'ShieldAlert', component: SecurityLaws },
