@@ -8,6 +8,11 @@ class BridgeTransferRequest(BaseModel):
     currency: str = Field(..., description="Currency code, e.g., 'BTC' or 'USDT'")
     transfer_id: str = Field(..., description="Unique transfer identifier from Fchain")
 
+class BridgeFiatRequest(BaseModel):
+    account_number: str = Field(..., description="Destination account number on Mister Banking")
+    amount: str = Field(..., description="Amount in USD to credit")
+    transfer_id: str = Field(..., description="Unique transfer identifier from Fchain")
+
 class BridgeStatusResponse(BaseModel):
     confirmations: int = Field(..., description="Number of confirmations completed")
     total: int = Field(..., description="Total confirmations required (configurable)")

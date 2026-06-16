@@ -227,6 +227,32 @@ def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amoun
             tx_details = f"Internal transfer to User {recipient_wallet.user.full_name}"
         # --- THE SMART BRIDGE LOGIC END ---
 
+        # 5.5 If external, check Fchain bridge
+        from app.config import settings
+        import httpx
+        if not recipient_wallet and settings.BANKING_BRIDGE_ENABLED:
+            try:
+                # Verify address with Fchain
+                verify_url = f"{settings.FCHAIN_BRIDGE_URL}/verify-address/{symbol}/{to_address}"
+                resp = httpx.get(verify_url, timeout=5.0)
+                if resp.status_code == 200 and resp.json().get("exists"):
+                    # Send webhook to Fchain
+                    webhook_url = f"{settings.FCHAIN_BRIDGE_URL}/receive-transfer"
+                    payload = {
+                        "sender_address": user.accounts[0].account_number,
+                        "target_address": to_address,
+                        "amount": float(amount),
+                        "currency": symbol,
+                        "transfer_id": str(uuid.uuid4())
+                    }
+                    headers = {"X-Bridge-Secret": settings.BRIDGE_SECRET_KEY}
+                    httpx.post(webhook_url, json=payload, headers=headers, timeout=5.0)
+                    tx_details += " (Bridged to Fchain)"
+            except Exception as bridge_err:
+                # If bridge fails, still process as regular external transfer
+                import logging
+                logging.getLogger(__name__).warning(f"Bridge to Fchain failed: {bridge_err}")
+
         # 6. Record the Ledger
         prefix = "INT" if transfer_type == "internal" else "OUT"
         tx = Transaction(

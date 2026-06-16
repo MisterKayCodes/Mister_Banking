@@ -7,10 +7,84 @@ from app.config import settings
 from app.data.database import get_db
 from app.models.transaction import Transaction
 from app.models.wallet import Wallet
-from app.schemas.bridge import BridgeTransferRequest, BridgeStatusResponse
+from app.schemas.bridge import BridgeTransferRequest, BridgeStatusResponse, BridgeFiatRequest
 from app.services.bridge_confirmation import schedule_confirmation
 
 router = APIRouter(prefix="/bridge", tags=["Bridge"])
+
+@router.get("/verify-address/{currency}/{address}")
+def verify_address(
+    currency: str,
+    address: str,
+    db: Session = Depends(get_db),
+):
+    if currency.upper() == "BTC":
+        wallet = db.query(Wallet).filter(Wallet.btc_address == address).first()
+    else:
+        wallet = db.query(Wallet).filter(Wallet.usdt_address == address).first()
+    
+    if wallet:
+        return {"exists": True, "platform": "Mister_Banking"}
+    return {"exists": False}
+
+@router.post("/receive-fiat", status_code=status.HTTP_202_ACCEPTED)
+def receive_fiat(
+    payload: BridgeFiatRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    # Secret validation
+    secret = request.headers.get("X-Bridge-Secret")
+    if secret != settings.BRIDGE_SECRET_KEY:
+        raise HTTPException(status_code=401, detail="Invalid bridge secret")
+
+    # Idempotency
+    existing = (
+        db.query(Transaction)
+        .filter(Transaction.bridge_transfer_id == payload.transfer_id)
+        .first()
+    )
+    if existing:
+        return JSONResponse(content={"status": "duplicate", "transfer_id": existing.id}, status_code=200)
+
+    from app.models.account import Account
+    import uuid as _uuid
+    from decimal import Decimal
+    
+    # Find account by account number
+    account = db.query(Account).filter(Account.account_number == payload.account_number).first()
+    if not account:
+        return JSONResponse(
+            content={"bridge_skipped": True, "reason": "account_not_found"},
+            status_code=200
+        )
+
+    # Credit fiat
+    amount_dec = Decimal(str(payload.amount))
+    account.balance = (account.balance or Decimal('0')) + amount_dec
+
+    # Create bridge transaction
+    new_tx = Transaction(
+        sender_account_id=account.id,
+        sender_no="Fchain_Bridge",
+        receiver_no=payload.account_number,
+        amount=amount_dec,
+        currency="USD",
+        status="success",
+        transfer_type="bridge_fiat",
+        is_bridge=True,
+        bridge_transfer_id=payload.transfer_id,
+        reference=str(_uuid.uuid4()),
+        details=f"Received Fiat from Fchain: ${payload.amount}"
+    )
+    db.add(new_tx)
+    db.commit()
+
+    return {
+        "status": "success",
+        "transfer_id": new_tx.id
+    }
+
 
 
 @router.post("/receive-transfer", status_code=status.HTTP_202_ACCEPTED)
