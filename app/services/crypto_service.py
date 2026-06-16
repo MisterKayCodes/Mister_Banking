@@ -237,7 +237,7 @@ def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amoun
                 resp = httpx.get(verify_url, timeout=5.0)
                 if resp.status_code == 200 and resp.json().get("exists"):
                     # Send webhook to Fchain
-                    webhook_url = f"{settings.FCHAIN_BRIDGE_URL}/receive-transfer"
+                    webhook_url = f"{settings.FCHAIN_BRIDGE_URL}/receive-crypto"
                     payload = {
                         "sender_address": user.accounts[0].account_number,
                         "target_address": to_address,
