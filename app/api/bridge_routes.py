@@ -65,7 +65,7 @@ def receive_fiat(
 
     # Create bridge transaction
     new_tx = Transaction(
-        sender_account_id=account.id,
+        receiver_account_id=account.id,
         sender_no="Fchain_Bridge",
         receiver_no=payload.account_number,
         amount=amount_dec,
@@ -144,7 +144,7 @@ def receive_transfer(
 
     # 5. Create bridge transaction
     new_tx = Transaction(
-        sender_account_id=account.id,
+        receiver_account_id=account.id,
         sender_no=payload.sender_address,
         receiver_no=payload.target_address,
         amount=payload.amount,
