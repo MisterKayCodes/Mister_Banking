@@ -7,6 +7,8 @@ from enum import Enum
 class TransferType(str, Enum):
     INTERNAL = "internal"
     EXTERNAL = "external"
+    BRIDGE = "bridge"
+    BRIDGE_FIAT = "bridge_fiat"
 
 class TransactionCreate(BaseModel):
     from_account_no: str = Field(..., min_length=10, max_length=10)
