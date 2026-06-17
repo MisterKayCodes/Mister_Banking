@@ -246,12 +246,57 @@ def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amoun
                         "transfer_id": str(uuid.uuid4())
                     }
                     headers = {"X-Bridge-Secret": settings.BRIDGE_SECRET_KEY}
-                    httpx.post(webhook_url, json=payload, headers=headers, timeout=5.0)
+                    post_resp = httpx.post(webhook_url, json=payload, headers=headers, timeout=5.0)
+                    post_resp.raise_for_status()
                     tx_details += " (Bridged to Fchain)"
+            except httpx.HTTPStatusError as status_err:
+                # Restore the in-memory balance deduction before rolling back
+                if symbol == "BTC":
+                    wallet.btc_balance += amount
+                else:
+                    wallet.usdt_balance += amount
+                db.rollback()
+                error_details = f"Bridge Transfer Failed. Fchain rejected: {status_err.response.text}"
+                try:
+                    fail_tx = Transaction(
+                        reference=f"FAIL-{uuid.uuid4().hex[:8].upper()}",
+                        sender_account_id=user.accounts[0].id,
+                        sender_no=user.accounts[0].account_number,
+                        amount=amount,
+                        currency=symbol,
+                        status="failed",
+                        details=error_details,
+                        created_at=datetime.utcnow()
+                    )
+                    db.add(fail_tx)
+                    db.commit()
+                except Exception as log_err:
+                    db.rollback()
+                raise HTTPException(status_code=400, detail=error_details)
             except Exception as bridge_err:
-                # If bridge fails, still process as regular external transfer
-                import logging
-                logging.getLogger(__name__).warning(f"Bridge to Fchain failed: {bridge_err}")
+                # Restore the in-memory balance deduction before rolling back
+                if symbol == "BTC":
+                    wallet.btc_balance += amount
+                else:
+                    wallet.usdt_balance += amount
+                db.rollback()
+                error_details = f"Bridge Transfer Failed. Fchain rejected: {str(bridge_err)}"
+                try:
+                    fail_tx = Transaction(
+                        reference=f"FAIL-{uuid.uuid4().hex[:8].upper()}",
+                        sender_account_id=user.accounts[0].id,
+                        sender_no=user.accounts[0].account_number,
+                        amount=amount,
+                        currency=symbol,
+                        status="failed",
+                        details=error_details,
+                        created_at=datetime.utcnow()
+                    )
+                    db.add(fail_tx)
+                    db.commit()
+                except Exception as log_err:
+                    db.rollback()
+                raise HTTPException(status_code=400, detail=error_details)
 
         # 6. Record the Ledger
         prefix = "INT" if transfer_type == "internal" else "OUT"
@@ -284,6 +329,9 @@ def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amoun
 
         return tx
 
+    except HTTPException as he:
+        db.rollback()
+        raise he
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Transfer failed: {str(e)}")
