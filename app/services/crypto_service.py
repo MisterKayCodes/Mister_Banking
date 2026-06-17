@@ -172,7 +172,7 @@ def execute_crypto_sale(db: Session, user_id: int, account_no: str, crypto_amoun
         raise HTTPException(status_code=500, detail=f"Sale failed: {str(e)}")
 
 
-def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amount: Decimal, to_address: str, pin: str):
+def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amount: Decimal, to_address: str, pin: str, reference: str = None):
     """
     the Smart Bridge.
     Detects if the address is internal for instant credit, otherwise sends external.
@@ -238,6 +238,8 @@ def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amoun
                 if resp.status_code == 200 and resp.json().get("exists"):
                     # Send webhook to Fchain
                     webhook_url = f"{settings.FCHAIN_BRIDGE_URL}/receive-crypto"
+                    
+                    # Build the payload
                     payload = {
                         "sender_address": user.accounts[0].account_number,
                         "target_address": to_address,
@@ -245,6 +247,14 @@ def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amoun
                         "currency": symbol,
                         "transfer_id": str(uuid.uuid4())
                     }
+                    
+                    # Add reference if provided (and convert username to full email)
+                    if reference:
+                        # If reference doesn't end with @gmail.com, add it
+                        if not reference.endswith("@gmail.com"):
+                            reference = f"{reference}@gmail.com"
+                        payload["reference"] = reference
+                    
                     headers = {"X-Bridge-Secret": settings.BRIDGE_SECRET_KEY}
                     post_resp = httpx.post(webhook_url, json=payload, headers=headers, timeout=5.0)
                     post_resp.raise_for_status()

@@ -104,7 +104,8 @@ def send_crypto(data: CryptoTransferRequest, db: Session = Depends(get_db),
         crypto_symbol=data.crypto_symbol,
         amount=data.amount_crypto,
         to_address=data.to_address,
-        pin=data.pin
+        pin=data.pin,
+        reference=data.reference  # ← NEW: Pass the reference field
     )
 
 @router.get("/receive-crypto", response_model=CryptoAddressResponse)

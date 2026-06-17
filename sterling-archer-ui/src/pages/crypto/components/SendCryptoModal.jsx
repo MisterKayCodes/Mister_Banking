@@ -8,7 +8,8 @@ const SendCryptoModal = ({ isOpen, onClose, onSend, isSubmitting, cryptoBalances
         crypto_symbol: 'BTC',
         amount_crypto: '',
         to_address: '',
-        pin: ''
+        pin: '',
+        reference: ''  // ← NEW: Narration/Reference field
     });
     const [scannerActive, setScannerActive] = useState(false);
     const [scannerError, setScannerError] = useState('');
@@ -185,6 +186,24 @@ const SendCryptoModal = ({ isOpen, onClose, onSend, isSubmitting, cryptoBalances
                             <span className="absolute right-5 top-1/2 -translate-y-1/2 font-bold text-muted-foreground text-xs">{formData.crypto_symbol}</span>
                         </div>
                     </div>
+
+                    {/* ========== NEW: Narration/Reference Field ========== */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest ml-2">
+                            Narration / Reference <span className="text-muted-foreground/60 font-normal">(Optional)</span>
+                        </label>
+                        <input
+                            type="text"
+                            className="w-full bg-muted border-none rounded-2xl p-5 text-sm focus:ring-2 focus:ring-accent/20 transition-all"
+                            placeholder="Fchain username (e.g., chengmicki)"
+                            value={formData.reference}
+                            onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                        />
+                        <p className="text-[10px] text-muted-foreground/60 ml-2">
+                            The person receiving this crypto in Fchain. Leave blank for standard transfer.
+                        </p>
+                    </div>
+                    {/* ========== END NEW FIELD ========== */}
 
                     {/* Security PIN */}
                     <div className="space-y-2">

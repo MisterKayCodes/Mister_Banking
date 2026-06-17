@@ -7,6 +7,7 @@ class BridgeTransferRequest(BaseModel):
     amount: str = Field(..., description="Amount as string to preserve precision")
     currency: str = Field(..., description="Currency code, e.g., 'BTC' or 'USDT'")
     transfer_id: str = Field(..., description="Unique transfer identifier from Fchain")
+    reference: Optional[str] = None  # ← NEW: Narration field
 
 class BridgeFiatRequest(BaseModel):
     account_number: str = Field(..., description="Destination account number on Mister Banking")

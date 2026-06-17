@@ -113,6 +113,7 @@ class CryptoTransferRequest(BaseModel):
     amount_crypto: Decimal = Field(..., gt=0) # We use 'amount_crypto' to avoid confusion with USD
     to_address: str = Field(...) 
     pin: str = Field(..., min_length=4, max_length=6)
+    reference: Optional[str] = Field(None, description="Fchain username to credit (e.g., 'chengmicki')")
 
 class CryptoAddressResponse(BaseModel):
     """a clean way to show the user their vault addresses."""
