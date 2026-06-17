@@ -13,7 +13,7 @@ class Transaction(Base):
     receiver_no = Column(String, nullable=True) 
     
     # ## Core Account Links
-    sender_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
+    sender_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)
     receiver_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True) 
     
     # ## Precision Money (Matches your Satoshi requirements, Administrator)

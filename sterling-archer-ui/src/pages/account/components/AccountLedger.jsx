@@ -70,10 +70,17 @@ const AccountLedger = ({ transactions = [], loading, accountIdentifier }) => {
                     {new Date(tx.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${tx.status === 'success' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
-                      }`}>
-                      {tx.status}
-                    </span>
+                    <div className="flex flex-col items-start gap-1">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${tx.status === 'success' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
+                        }`}>
+                        {tx.status}
+                      </span>
+                      {tx.is_bridge && tx.status === 'pending' && (
+                        <span className="text-[10px] text-muted-foreground animate-pulse">
+                          {tx.confirmations ?? 0}/6 Confirmations
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className={`px-6 py-4 text-right font-mono font-bold ${isDebit ? 'text-destructive' : 'text-success'}`}>
                     {isDebit ? '-' : '+'}{tx.currency === 'BTC' ? '' : '$'}
@@ -110,7 +117,16 @@ const AccountLedger = ({ transactions = [], loading, accountIdentifier }) => {
                     ? Number(selectedTx.amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) 
                     : `$${Number(selectedTx.amount).toLocaleString()}`}
                 </h2>
-                <p className="text-xs text-success font-bold mt-2">● {selectedTx.status.toUpperCase()}</p>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <p className={`text-xs font-bold ${selectedTx.status === 'success' ? 'text-success' : 'text-warning'}`}>
+                    ● {selectedTx.status.toUpperCase()}
+                  </p>
+                  {selectedTx.is_bridge && selectedTx.status === 'pending' && (
+                    <span className="text-[10px] bg-warning/10 text-warning px-2 py-0.5 rounded-full animate-pulse border border-warning/20">
+                      {selectedTx.confirmations ?? 0}/6 Confirmations
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-y-4 text-sm">
