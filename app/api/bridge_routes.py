@@ -65,6 +65,7 @@ def receive_fiat(
 
     # Create bridge transaction
     new_tx = Transaction(
+        sender_account_id=account.id,
         receiver_account_id=account.id,
         sender_no="Fchain_Bridge",
         receiver_no=payload.account_number,
@@ -143,7 +144,10 @@ def receive_transfer(
         )
 
     # 5. Create bridge transaction
+    # Workaround: SQLite requires sender_account_id. We use account.id to bypass NOT NULL constraint.
+    # The transaction is identified as bridge via is_bridge=True and sender_no.
     new_tx = Transaction(
+        sender_account_id=account.id,
         receiver_account_id=account.id,
         sender_no=payload.sender_address,
         receiver_no=payload.target_address,
