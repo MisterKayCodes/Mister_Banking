@@ -31,10 +31,16 @@ def validate_external_address(address: str, coin: str) -> bool:
     """we verify the target looks like a real vault."""
     coin = coin.upper()
     if coin == "BTC":
-        # Our generator: bc1q + 32 chars. 
-        # We'll allow 30-45 to be safe for external variants.
-        return address.startswith("bc1q") and 30 <= len(address) <= 60
+        # BTC addresses: bc1q (native segwit), 1 (legacy), 3 (segwit)
+        return (address.startswith("bc1q") and 30 <= len(address) <= 60) or \
+               (address.startswith("1") and 25 <= len(address) <= 34) or \
+               (address.startswith("3") and 25 <= len(address) <= 34)
     elif coin == "USDT":
-        # Our generator: 0x + 40 hex chars (20 bytes).
-        return address.startswith("0x") and len(address) == 42
+        # ERC20: 0x + 40 hex chars (42 total)
+        # TRC20: T + 33 chars (34 total)
+        if address.startswith("0x") and len(address) == 42:
+            return True
+        if address.startswith("T") and len(address) == 34:
+            return True
+        return False
     return False
