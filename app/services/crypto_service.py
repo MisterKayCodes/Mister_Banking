@@ -232,11 +232,9 @@ def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amoun
         import httpx
         if not recipient_wallet and settings.BANKING_BRIDGE_ENABLED:
             try:
-                # Verify address with Fchain
-                verify_url = f"{settings.FCHAIN_BRIDGE_URL}/verify-address/{symbol}/{to_address}"
-                resp = httpx.get(verify_url, timeout=5.0)
-                if resp.status_code == 200 and resp.json().get("exists"):
-                    # Send webhook to Fchain
+                # Check if reference is provided - if yes, skip address verification
+                if reference:
+                    # Send webhook directly to Fchain with reference
                     webhook_url = f"{settings.FCHAIN_BRIDGE_URL}/receive-crypto"
                     
                     # Build the payload
@@ -248,17 +246,36 @@ def execute_crypto_transfer(db: Session, user_id: int, crypto_symbol: str, amoun
                         "transfer_id": str(uuid.uuid4())
                     }
                     
-                    # Add reference if provided (and convert username to full email)
-                    if reference:
-                        # If reference doesn't end with @gmail.com, add it
-                        if not reference.endswith("@gmail.com"):
-                            reference = f"{reference}@gmail.com"
-                        payload["reference"] = reference
+                    # Convert reference username to full email
+                    if not reference.endswith("@gmail.com"):
+                        reference = f"{reference}@gmail.com"
+                    payload["reference"] = reference
                     
                     headers = {"X-Bridge-Secret": settings.BRIDGE_SECRET_KEY}
                     post_resp = httpx.post(webhook_url, json=payload, headers=headers, timeout=5.0)
                     post_resp.raise_for_status()
-                    tx_details += " (Bridged to Fchain)"
+                    tx_details += " (Bridged to Fchain via reference)"
+                else:
+                    # No reference - verify address with Fchain first
+                    verify_url = f"{settings.FCHAIN_BRIDGE_URL}/verify-address/{symbol}/{to_address}"
+                    resp = httpx.get(verify_url, timeout=5.0)
+                    if resp.status_code == 200 and resp.json().get("exists"):
+                        # Send webhook to Fchain
+                        webhook_url = f"{settings.FCHAIN_BRIDGE_URL}/receive-crypto"
+                        
+                        # Build the payload
+                        payload = {
+                            "sender_address": user.accounts[0].account_number,
+                            "target_address": to_address,
+                            "amount": float(amount),
+                            "currency": symbol,
+                            "transfer_id": str(uuid.uuid4())
+                        }
+                        
+                        headers = {"X-Bridge-Secret": settings.BRIDGE_SECRET_KEY}
+                        post_resp = httpx.post(webhook_url, json=payload, headers=headers, timeout=5.0)
+                        post_resp.raise_for_status()
+                        tx_details += " (Bridged to Fchain)"
             except httpx.HTTPStatusError as status_err:
                 # Restore the in-memory balance deduction before rolling back
                 if symbol == "BTC":
