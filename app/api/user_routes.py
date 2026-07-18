@@ -164,7 +164,7 @@ def check_kyc_folder(db: Session = Depends(get_db), current_user=Depends(get_cur
 def ask_for_help(
     data: SupportMessageCreate, 
     db: Session = Depends(get_db), 
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user_or_suspended)  # Allow blocked users to still reach support
 ):
     return send_support_message(
         db, 
@@ -177,6 +177,6 @@ def ask_for_help(
 @router.get("/me/support/history", response_model=List[SupportMessageResponse])
 def get_my_support_chat(
     db: Session = Depends(get_db), 
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user_or_suspended)  # Allow blocked users to view their support history
 ):
     return get_user_support_history(db, user_id=current_user.id)
