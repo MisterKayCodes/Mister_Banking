@@ -77,8 +77,8 @@ const SupportCenter = () => {
                             <div key={msg.id} className={`p-8 transition-colors ${replyingTo === msg.id ? 'bg-primary/5' : 'hover:bg-muted/10'}`}>
                                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                                     <div className="flex items-start gap-4 flex-1">
-                                        <div className="w-12 h-12 rounded-2xl bg-muted/50 border border-border flex items-center justify-center text-muted-foreground shrink-0 shadow-sm">
-                                            <Icon name="User" size={20} />
+                                        <div className={`w-12 h-12 rounded-2xl ${msg.is_from_admin ? 'bg-primary/20 text-primary' : 'bg-muted/50 text-muted-foreground'} border border-border flex items-center justify-center shrink-0 shadow-sm`}>
+                                            <Icon name={msg.is_from_admin ? "ShieldCheck" : "User"} size={20} />
                                         </div>
                                         <div className="space-y-2">
                                             <div className="flex items-center gap-3">
@@ -87,22 +87,26 @@ const SupportCenter = () => {
                                                 <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">{new Date(msg.created_at).toLocaleString()}</span>
                                             </div>
                                             <h4 className="font-heading font-bold text-foreground text-lg italic uppercase tracking-tight">{msg.subject}</h4>
-                                            <div className="bg-card border border-border rounded-2xl p-4 text-sm text-foreground italic relative">
-                                                <div className="absolute top-0 left-4 -mt-2.5 bg-card px-2 text-[9px] font-black text-muted-foreground uppercase">Original Message</div>
+                                            <div className={`bg-card border ${msg.is_from_admin ? 'border-primary/50' : 'border-border'} rounded-2xl p-4 text-sm text-foreground italic relative`}>
+                                                <div className={`absolute top-0 left-4 -mt-2.5 bg-card px-2 text-[9px] font-black uppercase ${msg.is_from_admin ? 'text-primary' : 'text-muted-foreground'}`}>
+                                                    {msg.is_from_admin ? 'Admin Reply' : 'Original Message'}
+                                                </div>
                                                 "{msg.message}"
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="shrink-0 pt-1">
-                                        {replyingTo !== msg.id ? (
-                                            <Button onClick={() => setReplyingTo(msg.id)} size="sm" className="bg-foreground text-background">
-                                                Compose Reply
-                                            </Button>
-                                        ) : (
-                                            <button onClick={() => setReplyingTo(null)} className="text-[10px] font-black uppercase text-muted-foreground hover:text-foreground underline underline-offset-4">
-                                                Collapse Thread
-                                            </button>
+                                        {!msg.is_from_admin && (
+                                            replyingTo !== msg.id ? (
+                                                <Button onClick={() => setReplyingTo(msg.id)} size="sm" className="bg-foreground text-background">
+                                                    Compose Reply
+                                                </Button>
+                                            ) : (
+                                                <button onClick={() => setReplyingTo(null)} className="text-[10px] font-black uppercase text-muted-foreground hover:text-foreground underline underline-offset-4">
+                                                    Collapse Thread
+                                                </button>
+                                            )
                                         )}
                                     </div>
                                 </div>
