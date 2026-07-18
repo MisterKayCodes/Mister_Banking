@@ -20,4 +20,4 @@ def get_user_support_history(db: Session, user_id: int):
 
 def get_all_admin_messages(db: Session):
     # Admin view of all incoming support requests
-    return db.query(SupportMessage).filter(SupportMessage.is_from_admin == False).order_by(SupportMessage.created_at.desc()).all()
+    return db.query(SupportMessage).filter(SupportMessage.is_from_admin.is_(False)).order_by(SupportMessage.created_at.desc()).all()
