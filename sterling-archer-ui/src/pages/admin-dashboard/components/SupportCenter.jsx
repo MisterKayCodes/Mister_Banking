@@ -12,15 +12,15 @@ const SupportCenter = () => {
     const [replyMessage, setReplyMessage] = useState('');
     const [transmitting, setTransmitting] = useState(false);
 
-    const fetchInbox = async () => {
+    const fetchInbox = async (showLoading = true) => {
         try {
-            setLoading(true);
+            if (showLoading) setLoading(true);
             const response = await api.get('/admin/support/inbox');
             setInbox(response.data);
         } catch (error) {
             showToast('Failed to synchronize support inbox.', 'error');
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
     };
 
@@ -36,7 +36,7 @@ const SupportCenter = () => {
             showToast('Response transmitted successfully.', 'success');
             setReplyingTo(null);
             setReplyMessage('');
-            fetchInbox();
+            fetchInbox(false); // Seamlessly refresh without the loading screen
         } catch (error) {
             showToast('Communication failure: Response delivery failed.', 'error');
         } finally {
